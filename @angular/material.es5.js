@@ -6545,7 +6545,7 @@ var MdAutocompleteTrigger = /*@__PURE__*/(function () {
                 return Observable.fromEvent(this._document, 'click').filter(function (event) {
                     var /** @type {?} */ clickTarget = (event.target);
                     return _this._panelOpen &&
-                        !_this._inputContainer._elementRef.nativeElement.contains(clickTarget) &&
+                        !(_this._inputContainer ? _this._inputContainer._elementRef : _this._element).nativeElement.contains(clickTarget) &&
                         !_this._overlayRef.overlayElement.contains(clickTarget);
                 });
             }

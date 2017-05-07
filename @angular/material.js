@@ -6264,7 +6264,7 @@ class MdAutocompleteTrigger {
             return Observable.fromEvent(this._document, 'click').filter((event) => {
                 let /** @type {?} */ clickTarget = (event.target);
                 return this._panelOpen &&
-                    !this._inputContainer._elementRef.nativeElement.contains(clickTarget) &&
+                    !(this._inputContainer ? this._inputContainer._elementRef : this._element).nativeElement.contains(clickTarget) &&
                     !this._overlayRef.overlayElement.contains(clickTarget);
             });
         }
