@@ -1,5 +1,5 @@
 /**
-  * @license Angular Material v2.0.0-beta.3
+  * @license Angular Material v2.0.0-beta.5
   * Copyright (c) 2017 Google, Inc. https://material.angular.io/
   * License: MIT
   */
@@ -13,12 +13,12 @@ import { Subscription } from 'rxjs/Subscription';
 import 'rxjs/add/observable/fromEvent';
 import 'rxjs/add/observable/merge';
 import 'rxjs/add/operator/auditTime';
+import 'rxjs/add/operator/first';
 import 'rxjs/add/observable/of';
 import { FormGroupDirective, FormsModule, NG_VALUE_ACCESSOR, NgControl, NgForm } from '@angular/forms';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import 'rxjs/add/operator/filter';
 import 'rxjs/add/operator/switchMap';
-import 'rxjs/add/operator/first';
 
 /**
  * Wrapper around Error that sets the error message.
@@ -894,24 +894,24 @@ class Platform {
         /**
          * Layout Engines
          */
-        this.EDGE = /(edge)/i.test(navigator.userAgent);
-        this.TRIDENT = /(msie|trident)/i.test(navigator.userAgent);
-        // EdgeHTML and Trident mock Blink specific things and need to excluded from this check.
-        this.BLINK = !!(window.chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT;
-        // Webkit is part of the userAgent in EdgeHTML Blink and Trident, so we need to
-        // ensure that Webkit runs standalone and is not use as another engines base.
-        this.WEBKIT = /AppleWebKit/i.test(navigator.userAgent) && !this.BLINK && !this.EDGE && !this.TRIDENT;
+        this.EDGE = this.isBrowser && /(edge)/i.test(navigator.userAgent);
+        this.TRIDENT = this.isBrowser && /(msie|trident)/i.test(navigator.userAgent);
+        // EdgeHTML and Trident mock Blink specific things and need to be excluded from this check.
+        this.BLINK = this.isBrowser && !!(window.chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT;
+        // Webkit is part of the userAgent in EdgeHTML, Blink and Trident. Therefore we need to
+        // ensure that Webkit runs standalone and is not used as another engine's base.
+        this.WEBKIT = this.isBrowser && /AppleWebKit/i.test(navigator.userAgent) && !this.BLINK && !this.EDGE && !this.TRIDENT;
         /**
          * Browsers and Platform Types
          */
-        this.IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        this.IOS = this.isBrowser && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         // It's difficult to detect the plain Gecko engine, because most of the browsers identify
         // them self as Gecko-like browsers and modify the userAgent's according to that.
         // Since we only cover one explicit Firefox case, we can simply check for Firefox
         // instead of having an unstable check for Gecko.
-        this.FIREFOX = /(firefox|minefield)/i.test(navigator.userAgent);
+        this.FIREFOX = this.isBrowser && /(firefox|minefield)/i.test(navigator.userAgent);
         // Trident on mobile adds the android platform to the userAgent to trick detections.
-        this.ANDROID = /android/i.test(navigator.userAgent) && !this.TRIDENT;
+        this.ANDROID = this.isBrowser && /android/i.test(navigator.userAgent) && !this.TRIDENT;
     }
 }
 Platform.decorators = [
@@ -3415,7 +3415,6 @@ class ConnectedOverlayDirective {
         this._renderer = _renderer;
         this._scrollDispatcher = _scrollDispatcher;
         this._dir = _dir;
-        this._open = false;
         this._hasBackdrop = false;
         this._offsetX = 0;
         this._offsetY = 0;
@@ -3423,6 +3422,10 @@ class ConnectedOverlayDirective {
          * Strategy to be used when handling scroll events while the overlay is open.
          */
         this.scrollStrategy = new RepositionScrollStrategy(this._scrollDispatcher);
+        /**
+         * Whether the overlay is open.
+         */
+        this.open = false;
         /**
          * Event emitted when the backdrop is clicked.
          */
@@ -3490,20 +3493,6 @@ class ConnectedOverlayDirective {
         this._hasBackdrop = coerceBooleanProperty(value);
     }
     /**
-     * @return {?}
-     */
-    get open() {
-        return this._open;
-    }
-    /**
-     * @param {?} value
-     * @return {?}
-     */
-    set open(value) {
-        value ? this._attachOverlay() : this._detachOverlay();
-        this._open = value;
-    }
-    /**
      * The associated overlay reference.
      * @return {?}
      */
@@ -3522,6 +3511,15 @@ class ConnectedOverlayDirective {
      */
     ngOnDestroy() {
         this._destroyOverlay();
+    }
+    /**
+     * @param {?} changes
+     * @return {?}
+     */
+    ngOnChanges(changes) {
+        if (changes['open']) {
+            this.open ? this._attachOverlay() : this._detachOverlay();
+        }
     }
     /**
      * Creates an overlay
@@ -3682,8 +3680,8 @@ ConnectedOverlayDirective.propDecorators = {
     'minHeight': [{ type: Input },],
     'backdropClass': [{ type: Input },],
     'scrollStrategy': [{ type: Input },],
-    'hasBackdrop': [{ type: Input },],
     'open': [{ type: Input },],
+    'hasBackdrop': [{ type: Input },],
     'backdropClick': [{ type: Output },],
     'positionChange': [{ type: Output },],
     'attach': [{ type: Output },],
@@ -4818,6 +4816,7 @@ class FocusOriginMonitor {
      *     When the element is blurred, null will be emitted.
      */
     monitor(element, renderer, checkChildren) {
+        // Do nothing if we're not on the browser platform.
         if (!this._platform.isBrowser) {
             return Observable.of();
         }
@@ -5152,6 +5151,504 @@ function coerceNumberProperty(value, fallbackValue = 0) {
     // '123hello' to be a valid number. Therefore we also check if Number(value) is NaN.
     return isNaN(parseFloat(/** @type {?} */ (value))) || isNaN(Number(value)) ? fallbackValue : Number(value);
 }
+
+/**
+ * Adapts type `D` to be usable as a date by cdk-based components that work with dates.
+ * @abstract
+ */
+class DateAdapter {
+    /**
+     * Gets the year component of the given date.
+     * @abstract
+     * @param {?} date The date to extract the year from.
+     * @return {?} The year component.
+     */
+    getYear(date) { }
+    /**
+     * Gets the month component of the given date.
+     * @abstract
+     * @param {?} date The date to extract the month from.
+     * @return {?} The month component (0-indexed, 0 = January).
+     */
+    getMonth(date) { }
+    /**
+     * Gets the date of the month component of the given date.
+     * @abstract
+     * @param {?} date The date to extract the date of the month from.
+     * @return {?} The month component (1-indexed, 1 = first of month).
+     */
+    getDate(date) { }
+    /**
+     * Gets the day of the week component of the given date.
+     * @abstract
+     * @param {?} date The date to extract the day of the week from.
+     * @return {?} The month component (0-indexed, 0 = Sunday).
+     */
+    getDayOfWeek(date) { }
+    /**
+     * Gets a list of names for the months.
+     * @abstract
+     * @param {?} style The naming style (e.g. long = 'January', short = 'Jan', narrow = 'J').
+     * @return {?} An ordered list of all month names, starting with January.
+     */
+    getMonthNames(style$$1) { }
+    /**
+     * Gets a list of names for the dates of the month.
+     * @abstract
+     * @return {?} An ordered list of all date of the month names, starting with '1'.
+     */
+    getDateNames() { }
+    /**
+     * Gets a list of names for the days of the week.
+     * @abstract
+     * @param {?} style The naming style (e.g. long = 'Sunday', short = 'Sun', narrow = 'S').
+     * @return {?} An ordered list of all weekday names, starting with Sunday.
+     */
+    getDayOfWeekNames(style$$1) { }
+    /**
+     * Gets the name for the year of the given date.
+     * @abstract
+     * @param {?} date The date to get the year name for.
+     * @return {?} The name of the given year (e.g. '2017').
+     */
+    getYearName(date) { }
+    /**
+     * Gets the first day of the week.
+     * @abstract
+     * @return {?} The first day of the week (0-indexed, 0 = Sunday).
+     */
+    getFirstDayOfWeek() { }
+    /**
+     * Gets the number of days in the month of the given date.
+     * @abstract
+     * @param {?} date The date whose month should be checked.
+     * @return {?} The number of days in the month of the given date.
+     */
+    getNumDaysInMonth(date) { }
+    /**
+     * Clones the given date.
+     * @abstract
+     * @param {?} date The date to clone
+     * @return {?} A new date equal to the given date.
+     */
+    clone(date) { }
+    /**
+     * Creates a date with the given year, month, and date. Does not allow over/under-flow of the
+     * month and date.
+     * @abstract
+     * @param {?} year The full year of the date. (e.g. 89 means the year 89, not the year 1989).
+     * @param {?} month The month of the date (0-indexed, 0 = January). Must be an integer 0 - 11.
+     * @param {?} date The date of month of the date. Must be an integer 1 - length of the given month.
+     * @return {?} The new date, or null if invalid.
+     */
+    createDate(year, month, date) { }
+    /**
+     * Gets today's date.
+     * @abstract
+     * @return {?} Today's date.
+     */
+    today() { }
+    /**
+     * Parses a date from a value.
+     * @abstract
+     * @param {?} value The value to parse.
+     * @param {?} parseFormat The expected format of the value being parsed
+     *     (type is implementation-dependent).
+     * @return {?} The parsed date, or null if date could not be parsed.
+     */
+    parse(value, parseFormat) { }
+    /**
+     * Formats a date as a string.
+     * @abstract
+     * @param {?} date The value to parse.
+     * @param {?} displayFormat The format to use to display the date as a string.
+     * @return {?} The parsed date, or null if date could not be parsed.
+     */
+    format(date, displayFormat) { }
+    /**
+     * Adds the given number of years to the date. Years are counted as if flipping 12 pages on the
+     * calendar for each year and then finding the closest date in the new month. For example when
+     * adding 1 year to Feb 29, 2016, the resulting date will be Feb 28, 2017.
+     * @abstract
+     * @param {?} date The date to add years to.
+     * @param {?} years The number of years to add (may be negative).
+     * @return {?} A new date equal to the given one with the specified number of years added.
+     */
+    addCalendarYears(date, years) { }
+    /**
+     * Adds the given number of months to the date. Months are counted as if flipping a page on the
+     * calendar for each month and then finding the closest date in the new month. For example when
+     * adding 1 month to Jan 31, 2017, the resulting date will be Feb 28, 2017.
+     * @abstract
+     * @param {?} date The date to add months to.
+     * @param {?} months The number of months to add (may be negative).
+     * @return {?} A new date equal to the given one with the specified number of months added.
+     */
+    addCalendarMonths(date, months) { }
+    /**
+     * Adds the given number of days to the date. Days are counted as if moving one cell on the
+     * calendar for each day.
+     * @abstract
+     * @param {?} date The date to add days to.
+     * @param {?} days The number of days to add (may be negative).
+     * @return {?} A new date equal to the given one with the specified number of days added.
+     */
+    addCalendarDays(date, days) { }
+    /**
+     * Gets the RFC 3339 compatible date string (https://tools.ietf.org/html/rfc3339)  for the given
+     * date.
+     * @abstract
+     * @param {?} date The date to get the ISO date string for.
+     * @return {?} The ISO date string date string.
+     */
+    getISODateString(date) { }
+    /**
+     * Sets the locale used for all dates.
+     * @param {?} locale The new locale.
+     * @return {?}
+     */
+    setLocale(locale) {
+        this.locale = locale;
+    }
+    /**
+     * Compares two dates.
+     * @param {?} first The first date to compare.
+     * @param {?} second The second date to compare.
+     * @return {?} 0 if the dates are equal, a number less than 0 if the first date is earlier,
+     *     a number greater than 0 if the first date is later.
+     */
+    compareDate(first, second) {
+        return this.getYear(first) - this.getYear(second) ||
+            this.getMonth(first) - this.getMonth(second) ||
+            this.getDate(first) - this.getDate(second);
+    }
+    /**
+     * Checks if two dates are equal.
+     * @param {?} first The first date to check.
+     * @param {?} second The second date to check.
+     *     Null dates are considered equal to other null dates.
+     * @return {?}
+     */
+    sameDate(first, second) {
+        return first && second ? !this.compareDate(first, second) : first == second;
+    }
+    /**
+     * Clamp the given date between min and max dates.
+     * @param {?} date The date to clamp.
+     * @param {?=} min The minimum value to allow. If null or omitted no min is enforced.
+     * @param {?=} max The maximum value to allow. If null or omitted no max is enforced.
+     * @return {?} `min` if `date` is less than `min`, `max` if date is greater than `max`,
+     *     otherwise `date`.
+     */
+    clampDate(date, min, max) {
+        if (min && this.compareDate(date, min) < 0) {
+            return min;
+        }
+        if (max && this.compareDate(date, max) > 0) {
+            return max;
+        }
+        return date;
+    }
+}
+
+/**
+ * Whether the browser supports the Intl API.
+ */
+const SUPPORTS_INTL_API = typeof Intl != 'undefined';
+/**
+ * The default month names to use if Intl API is not available.
+ */
+const DEFAULT_MONTH_NAMES = {
+    'long': [
+        'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+        'October', 'November', 'December'
+    ],
+    'short': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    'narrow': ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+};
+/**
+ * The default date names to use if Intl API is not available.
+ */
+const DEFAULT_DATE_NAMES = range(31, i => String(i + 1));
+/**
+ * The default day of the week names to use if Intl API is not available.
+ */
+const DEFAULT_DAY_OF_WEEK_NAMES = {
+    'long': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    'short': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    'narrow': ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+};
+/**
+ * Creates an array and fills it with values.
+ * @template T
+ * @param {?} length
+ * @param {?} valueFunction
+ * @return {?}
+ */
+function range(length, valueFunction) {
+    return Array.apply(null, Array(length)).map((v, i) => valueFunction(i));
+}
+/**
+ * Adapts the native JS Date for use with cdk-based components that work with dates.
+ */
+class NativeDateAdapter extends DateAdapter {
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getYear(date) {
+        return date.getFullYear();
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getMonth(date) {
+        return date.getMonth();
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getDate(date) {
+        return date.getDate();
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getDayOfWeek(date) {
+        return date.getDay();
+    }
+    /**
+     * @param {?} style
+     * @return {?}
+     */
+    getMonthNames(style$$1) {
+        if (SUPPORTS_INTL_API) {
+            let /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, { month: style$$1 });
+            return range(12, i => this._stripDirectionalityCharacters(dtf.format(new Date(2017, i, 1))));
+        }
+        return DEFAULT_MONTH_NAMES[style$$1];
+    }
+    /**
+     * @return {?}
+     */
+    getDateNames() {
+        if (SUPPORTS_INTL_API) {
+            let /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, { day: 'numeric' });
+            return range(31, i => this._stripDirectionalityCharacters(dtf.format(new Date(2017, 0, i + 1))));
+        }
+        return DEFAULT_DATE_NAMES;
+    }
+    /**
+     * @param {?} style
+     * @return {?}
+     */
+    getDayOfWeekNames(style$$1) {
+        if (SUPPORTS_INTL_API) {
+            let /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, { weekday: style$$1 });
+            return range(7, i => this._stripDirectionalityCharacters(dtf.format(new Date(2017, 0, i + 1))));
+        }
+        return DEFAULT_DAY_OF_WEEK_NAMES[style$$1];
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getYearName(date) {
+        if (SUPPORTS_INTL_API) {
+            let /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, { year: 'numeric' });
+            return this._stripDirectionalityCharacters(dtf.format(date));
+        }
+        return String(this.getYear(date));
+    }
+    /**
+     * @return {?}
+     */
+    getFirstDayOfWeek() {
+        // We can't tell using native JS Date what the first day of the week is, we default to Sunday.
+        return 0;
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getNumDaysInMonth(date) {
+        return this.getDate(this._createDateWithOverflow(this.getYear(date), this.getMonth(date) + 1, 0));
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    clone(date) {
+        return this.createDate(this.getYear(date), this.getMonth(date), this.getDate(date));
+    }
+    /**
+     * @param {?} year
+     * @param {?} month
+     * @param {?} date
+     * @return {?}
+     */
+    createDate(year, month, date) {
+        // Check for invalid month and date (except upper bound on date which we have to check after
+        // creating the Date).
+        if (month < 0 || month > 11 || date < 1) {
+            return null;
+        }
+        let /** @type {?} */ result = this._createDateWithOverflow(year, month, date);
+        // Check that the date wasn't above the upper bound for the month, causing the month to
+        // overflow.
+        if (result.getMonth() != month) {
+            return null;
+        }
+        return result;
+    }
+    /**
+     * @return {?}
+     */
+    today() {
+        return new Date();
+    }
+    /**
+     * @param {?} value
+     * @param {?} parseFormat
+     * @return {?}
+     */
+    parse(value, parseFormat) {
+        // We have no way using the native JS Date to set the parse format or locale, so we ignore these
+        // parameters.
+        let /** @type {?} */ timestamp = typeof value == 'number' ? value : Date.parse(value);
+        return isNaN(timestamp) ? null : new Date(timestamp);
+    }
+    /**
+     * @param {?} date
+     * @param {?} displayFormat
+     * @return {?}
+     */
+    format(date, displayFormat) {
+        if (SUPPORTS_INTL_API) {
+            let /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, displayFormat);
+            return this._stripDirectionalityCharacters(dtf.format(date));
+        }
+        return this._stripDirectionalityCharacters(date.toDateString());
+    }
+    /**
+     * @param {?} date
+     * @param {?} years
+     * @return {?}
+     */
+    addCalendarYears(date, years) {
+        return this.addCalendarMonths(date, years * 12);
+    }
+    /**
+     * @param {?} date
+     * @param {?} months
+     * @return {?}
+     */
+    addCalendarMonths(date, months) {
+        let /** @type {?} */ newDate = this._createDateWithOverflow(this.getYear(date), this.getMonth(date) + months, this.getDate(date));
+        // It's possible to wind up in the wrong month if the original month has more days than the new
+        // month. In this case we want to go to the last day of the desired month.
+        // Note: the additional + 12 % 12 ensures we end up with a positive number, since JS % doesn't
+        // guarantee this.
+        if (this.getMonth(newDate) != ((this.getMonth(date) + months) % 12 + 12) % 12) {
+            newDate = this._createDateWithOverflow(this.getYear(newDate), this.getMonth(newDate), 0);
+        }
+        return newDate;
+    }
+    /**
+     * @param {?} date
+     * @param {?} days
+     * @return {?}
+     */
+    addCalendarDays(date, days) {
+        return this._createDateWithOverflow(this.getYear(date), this.getMonth(date), this.getDate(date) + days);
+    }
+    /**
+     * @param {?} date
+     * @return {?}
+     */
+    getISODateString(date) {
+        return [
+            date.getUTCFullYear(),
+            this._2digit(date.getUTCMonth() + 1),
+            this._2digit(date.getUTCDate())
+        ].join('-');
+    }
+    /**
+     * Creates a date but allows the month and date to overflow.
+     * @param {?} year
+     * @param {?} month
+     * @param {?} date
+     * @return {?}
+     */
+    _createDateWithOverflow(year, month, date) {
+        let /** @type {?} */ result = new Date(year, month, date);
+        // We need to correct for the fact that JS native Date treats years in range [0, 99] as
+        // abbreviations for 19xx.
+        if (year >= 0 && year < 100) {
+            result.setFullYear(this.getYear(result) - 1900);
+        }
+        return result;
+    }
+    /**
+     * Pads a number to make it two digits.
+     * @param {?} n The number to pad.
+     * @return {?} The padded number.
+     */
+    _2digit(n) {
+        return ('00' + n).slice(-2);
+    }
+    /**
+     * Strip out unicode LTR and RTL characters. Edge and IE insert these into formatted dates while
+     * other browsers do not. We remove them to make output consistent and because they interfere with
+     * date parsing.
+     * @param {?} s The string to strip direction characters from.
+     * @return {?} The stripped string.
+     */
+    _stripDirectionalityCharacters(s) {
+        return s.replace(/[\u200e\u200f]/g, '');
+    }
+}
+
+const MD_DATE_FORMATS = new InjectionToken('md-date-formats');
+
+const MD_NATIVE_DATE_FORMATS = {
+    parse: {
+        dateInput: null,
+    },
+    display: {
+        dateInput: { year: 'numeric', month: 'numeric', day: 'numeric' },
+        monthYearLabel: { year: 'numeric', month: 'short' },
+        dateA11yLabel: { year: 'numeric', month: 'long', day: 'numeric' },
+        monthYearA11yLabel: { year: 'numeric', month: 'long' },
+    }
+};
+
+class NativeDateModule {
+}
+NativeDateModule.decorators = [
+    { type: NgModule, args: [{
+                providers: [{ provide: DateAdapter, useClass: NativeDateAdapter }],
+            },] },
+];
+/**
+ * @nocollapse
+ */
+NativeDateModule.ctorParameters = () => [];
+class MdNativeDateModule {
+}
+MdNativeDateModule.decorators = [
+    { type: NgModule, args: [{
+                imports: [NativeDateModule],
+                providers: [{ provide: MD_DATE_FORMATS, useValue: MD_NATIVE_DATE_FORMATS }],
+            },] },
+];
+/**
+ * @nocollapse
+ */
+MdNativeDateModule.ctorParameters = () => [];
 
 class MdCoreModule {
 }
@@ -6060,8 +6557,8 @@ class MdInputContainer {
 }
 MdInputContainer.decorators = [
     { type: Component, args: [{selector: 'md-input-container, mat-input-container',
-                template: "<div class=\"mat-input-wrapper\"> <div class=\"mat-input-table\"> <div class=\"mat-input-prefix\" *ngIf=\"_prefixChildren.length\"> <!-- TODO(andrewseguin): remove [md-prefix] --> <ng-content select=\"[mdPrefix], [matPrefix], [md-prefix]\"></ng-content> </div> <div class=\"mat-input-infix\" [class.mat-end]=\"align == 'end'\"> <ng-content selector=\"input, textarea\"></ng-content> <span class=\"mat-input-placeholder-wrapper\"> <label class=\"mat-input-placeholder\" [attr.for]=\"_mdInputChild.id\" [class.mat-empty]=\"_mdInputChild.empty && !_shouldAlwaysFloat\" [class.mat-float]=\"_canPlaceholderFloat\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\" *ngIf=\"_hasPlaceholder()\"> <ng-content select=\"md-placeholder, mat-placeholder\"></ng-content> {{_mdInputChild.placeholder}} <span class=\"mat-placeholder-required\" *ngIf=\"!hideRequiredMarker && _mdInputChild.required\">*</span> </label> </span> </div> <div class=\"mat-input-suffix\" *ngIf=\"_suffixChildren.length\"> <!-- TODO(andrewseguin): remove [md-suffix] --> <ng-content select=\"[mdSuffix], [matSuffix], [md-suffix]\"></ng-content> </div> </div> <div class=\"mat-input-underline\" [class.mat-disabled]=\"_mdInputChild.disabled\"> <span class=\"mat-input-ripple\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\"></span> </div> <div class=\"mat-input-subscript-wrapper\" [ngSwitch]=\"_getDisplayedMessages()\"> <div *ngSwitchCase=\"'error'\" [@transitionMessages]=\"_subscriptAnimationState\"> <ng-content select=\"md-error, mat-error\"></ng-content> </div> <div class=\"mat-input-hint-wrapper\" *ngSwitchCase=\"'hint'\" [@transitionMessages]=\"_subscriptAnimationState\"> <div *ngIf=\"hintLabel\" [id]=\"_hintLabelId\" class=\"mat-hint\">{{hintLabel}}</div> <ng-content select=\"md-hint:not([align='end']), mat-hint:not([align='end'])\"></ng-content> <div class=\"mat-input-hint-spacer\"></div> <ng-content select=\"md-hint[align='end'], mat-hint[align='end']\"></ng-content> </div> </div> </div> ",
-                styles: [".mat-input-container{display:inline-block;position:relative;font-family:Roboto,\"Helvetica Neue\",sans-serif;line-height:normal;text-align:left}[dir=rtl] .mat-input-container{text-align:right}.mat-input-container .mat-icon{width:auto;height:auto;font-size:100%;vertical-align:top}.mat-input-wrapper{margin:1em 0;padding-bottom:6px}.mat-input-table{display:inline-table;flex-flow:column;vertical-align:bottom;width:100%}.mat-input-table>*{display:table-cell}.mat-input-infix{position:relative}.mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;width:100%;vertical-align:bottom}.mat-end .mat-input-element{text-align:right}[dir=rtl] .mat-end .mat-input-element{text-align:left}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element:-webkit-autofill+.mat-input-placeholder-wrapper .mat-float{display:block;transform:translateY(-1.35em) scale(.75);width:133.33333%;transition:none}.mat-input-element::placeholder{color:transparent}.mat-input-element::-moz-placeholder{color:transparent}.mat-input-element::-webkit-input-placeholder{color:transparent}.mat-input-element:-ms-input-placeholder{color:transparent}.mat-input-placeholder{position:absolute;left:0;top:0;font-size:100%;pointer-events:none;z-index:1;padding-top:1em;width:100%;display:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:translateY(0);transform-origin:bottom left;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1)}.mat-input-placeholder.mat-empty{display:block;cursor:text}.mat-focused .mat-input-placeholder.mat-float,.mat-input-placeholder.mat-float:not(.mat-empty){display:block;transform:translateY(-1.35em) scale(.75);width:133.33333%}[dir=rtl] .mat-input-placeholder{transform-origin:bottom right;left:auto;right:0}.mat-input-placeholder:not(.mat-empty){transition:none}.mat-input-placeholder-wrapper{position:absolute;left:0;top:-1em;width:100%;padding-top:1em;overflow:hidden;pointer-events:none;transform:translate3d(0,0,0)}.mat-input-placeholder-wrapper::after{content:'';display:inline-table}.mat-input-underline{position:absolute;height:1px;width:100%;margin-top:4px;border-top-width:1px;border-top-style:solid}.mat-input-underline.mat-disabled{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;border-top:0;background-position:0}.mat-input-underline .mat-input-ripple{position:absolute;height:2px;z-index:1;top:-1px;width:100%;transform-origin:top;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-focused .mat-input-underline .mat-input-ripple{opacity:1}.mat-input-subscript-wrapper{position:absolute;font-size:75%;top:100%;width:100%;margin-top:-1.2em;line-height:1.2em;overflow:hidden}.mat-input-hint-wrapper{display:flex}.mat-input-hint-spacer{flex:1 0 10px}.mat-input-error{display:block}.mat-input-prefix,.mat-input-suffix{width:.1px;white-space:nowrap} /*# sourceMappingURL=input-container.css.map */ "],
+                template: "<div class=\"mat-input-wrapper\"> <div class=\"mat-input-table\"> <div class=\"mat-input-prefix\" *ngIf=\"_prefixChildren.length\"> <!-- TODO(andrewseguin): remove [md-prefix] --> <ng-content select=\"[mdPrefix], [matPrefix], [md-prefix]\"></ng-content> </div> <div class=\"mat-input-infix\" [class.mat-end]=\"align == 'end'\"> <ng-content selector=\"input, textarea\"></ng-content> <span class=\"mat-input-placeholder-wrapper\"> <label class=\"mat-input-placeholder\" [attr.for]=\"_mdInputChild.id\" [class.mat-empty]=\"_mdInputChild.empty && !_shouldAlwaysFloat\" [class.mat-float]=\"_canPlaceholderFloat\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\" *ngIf=\"_hasPlaceholder()\"> <ng-content select=\"md-placeholder, mat-placeholder\"></ng-content> {{_mdInputChild.placeholder}} <span class=\"mat-placeholder-required\" *ngIf=\"!hideRequiredMarker && _mdInputChild.required\">*</span> </label> </span> </div> <div class=\"mat-input-suffix\" *ngIf=\"_suffixChildren.length\"> <!-- TODO(andrewseguin): remove [md-suffix] --> <ng-content select=\"[mdSuffix], [matSuffix], [md-suffix]\"></ng-content> </div> </div> <div class=\"mat-input-underline\" #underline [class.mat-disabled]=\"_mdInputChild.disabled\"> <span class=\"mat-input-ripple\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\"></span> </div> <div class=\"mat-input-subscript-wrapper\" [ngSwitch]=\"_getDisplayedMessages()\"> <div *ngSwitchCase=\"'error'\" [@transitionMessages]=\"_subscriptAnimationState\"> <ng-content select=\"md-error, mat-error\"></ng-content> </div> <div class=\"mat-input-hint-wrapper\" *ngSwitchCase=\"'hint'\" [@transitionMessages]=\"_subscriptAnimationState\"> <div *ngIf=\"hintLabel\" [id]=\"_hintLabelId\" class=\"mat-hint\">{{hintLabel}}</div> <ng-content select=\"md-hint:not([align='end']), mat-hint:not([align='end'])\"></ng-content> <div class=\"mat-input-hint-spacer\"></div> <ng-content select=\"md-hint[align='end'], mat-hint[align='end']\"></ng-content> </div> </div> </div> ",
+                styles: [".mat-input-container{display:inline-block;position:relative;font-family:Roboto,\"Helvetica Neue\",sans-serif;line-height:normal;text-align:left}[dir=rtl] .mat-input-container{text-align:right}.mat-input-container .mat-datepicker-toggle,.mat-input-container .mat-icon{width:1em;height:1em;font-size:100%;vertical-align:top}.mat-input-wrapper{margin:1em 0;padding-bottom:6px}.mat-input-table{display:inline-table;flex-flow:column;vertical-align:bottom;width:100%}.mat-input-table>*{display:table-cell}.mat-input-infix{position:relative}.mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;width:100%;vertical-align:bottom}.mat-end .mat-input-element{text-align:right}[dir=rtl] .mat-end .mat-input-element{text-align:left}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element:-webkit-autofill+.mat-input-placeholder-wrapper .mat-float{display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%;transition:none}.mat-input-element::placeholder{color:transparent!important}.mat-input-element::-moz-placeholder{color:transparent!important}.mat-input-element::-webkit-input-placeholder{color:transparent!important}.mat-input-element:-ms-input-placeholder{color:transparent!important}.mat-input-placeholder{position:absolute;left:0;top:0;font-size:100%;pointer-events:none;z-index:1;padding-top:1em;width:100%;display:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:translate3d(0,0,0);transform-origin:bottom left;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1)}.mat-input-placeholder.mat-empty{display:block;cursor:text}.mat-focused .mat-input-placeholder.mat-float,.mat-input-placeholder.mat-float:not(.mat-empty){display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%}[dir=rtl] .mat-input-placeholder{transform-origin:bottom right;left:auto;right:0}.mat-input-placeholder:not(.mat-empty){transition:none}.mat-input-placeholder-wrapper{position:absolute;left:0;top:-1em;width:100%;padding-top:1em;overflow:hidden;pointer-events:none;transform:translate3d(0,0,0)}.mat-input-placeholder-wrapper::after{content:'';display:inline-table}.mat-input-underline{position:absolute;height:1px;width:100%;margin-top:4px;border-top-width:1px;border-top-style:solid}.mat-input-underline.mat-disabled{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;border-top:0;background-position:0}.mat-input-underline .mat-input-ripple{position:absolute;height:2px;z-index:1;top:-1px;width:100%;transform-origin:top;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-focused .mat-input-underline .mat-input-ripple{opacity:1}.mat-input-subscript-wrapper{position:absolute;font-size:75%;top:100%;width:100%;margin-top:-1.2em;line-height:1.2em;overflow:hidden}.mat-input-hint-wrapper{display:flex}.mat-input-hint-spacer{flex:1 0 10px}.mat-input-error{display:block}.mat-input-prefix,.mat-input-suffix{width:.1px;white-space:nowrap} /*# sourceMappingURL=input-container.css.map */ "],
                 animations: [
                     trigger('transitionMessages', [
                         state('enter', style({ opacity: 1, transform: 'translateY(0%)' })),
@@ -6105,6 +6602,7 @@ MdInputContainer.propDecorators = {
     'hideRequiredMarker': [{ type: Input },],
     'hintLabel': [{ type: Input },],
     'floatPlaceholder': [{ type: Input },],
+    'underlineRef': [{ type: ViewChild, args: ['underline',] },],
     '_mdInputChild': [{ type: ContentChild, args: [MdInputDirective,] },],
     '_placeholderChild': [{ type: ContentChild, args: [MdPlaceholder,] },],
     '_errorChildren': [{ type: ContentChildren, args: [MdErrorDirective,] },],
@@ -6206,6 +6704,7 @@ class MdAutocompleteTrigger {
         else {
             /** Update the panel width, in case the host width has changed */
             this._overlayRef.getState().width = this._getHostWidth();
+            this._overlayRef.updateSize();
         }
         if (!this._overlayRef.hasAttached()) {
             this._overlayRef.attach(this._portal);
@@ -8124,5 +8623,5 @@ MdTooltipModule.ctorParameters = () => [];
  * Generated bundle index. Do not edit.
  */
 
-export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ScrollDispatcher, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, MdError, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, GlobalPositionStrategy, ConnectedPositionStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, MdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdInputModule, MdTextareaAutosize, MdPlaceholder, MdHint, MdErrorDirective, MdPrefix, MdSuffix, MdInputDirective, MdInputContainer, MdInputContainerPlaceholderConflictError, MdInputContainerUnsupportedTypeError, MdInputContainerDuplicatedHintError, MdInputContainerMissingMdInputError, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵg, mixinDisabled as ɵo, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵh, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵn, VIEWPORT_RULER_PROVIDER as ɵm, VIEWPORT_RULER_PROVIDER_FACTORY as ɵl, ViewportRuler as ɵk, ScrollDispatchModule as ɵi, SCROLL_DISPATCHER_PROVIDER as ɵe, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵd, Scrollable as ɵj, RippleRenderer as ɵf };
+export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, MdError, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ScrollDispatcher, GlobalPositionStrategy, ConnectedPositionStrategy, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, MdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, NativeDateAdapter, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdInputModule, MdTextareaAutosize, MdPlaceholder, MdHint, MdErrorDirective, MdPrefix, MdSuffix, MdInputDirective, MdInputContainer, MdInputContainerPlaceholderConflictError, MdInputContainerUnsupportedTypeError, MdInputContainerDuplicatedHintError, MdInputContainerMissingMdInputError, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵg, mixinDisabled as ɵq, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵh, MD_DATE_FORMATS as ɵo, MD_NATIVE_DATE_FORMATS as ɵp, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵn, VIEWPORT_RULER_PROVIDER as ɵm, VIEWPORT_RULER_PROVIDER_FACTORY as ɵl, ViewportRuler as ɵk, ScrollDispatchModule as ɵi, SCROLL_DISPATCHER_PROVIDER as ɵe, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵd, Scrollable as ɵj, RippleRenderer as ɵf };
 //# sourceMappingURL=material.js.map

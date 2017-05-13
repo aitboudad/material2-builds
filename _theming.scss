@@ -1403,6 +1403,11 @@ $mat-menu-icon-margin: 16px !default;
     bottom: 0;
     right: 0;
 
+    // Disable pointer events for the ripple container because the container will overlay the
+    // user content and we don't want to disable mouse events on the user content.
+    // Pointer events can be safely disabled because the ripple trigger element is the host element.
+    pointer-events: none;
+
     // In high contrast mode this completely covers the text.
     @include cdk-high-contrast {
       opacity: 0.5;
@@ -1890,6 +1895,8 @@ $mat-menu-icon-margin: 16px !default;
   }
 }
 
+// /*** IMPORTED FILE NOT FOUND ***/
+@import '../../datepicker/datepicker-theme';/*** --- ***/
 // 
 
 
@@ -2606,6 +2613,7 @@ $mat-menu-icon-margin: 16px !default;
   // @include mat-card-theme($theme);
   // @include mat-checkbox-theme($theme);
   // @include mat-chips-theme($theme);
+  // @include mat-datepicker-theme($theme);
   // @include mat-dialog-theme($theme);
   // @include mat-grid-list-theme($theme);
   // @include mat-icon-theme($theme);

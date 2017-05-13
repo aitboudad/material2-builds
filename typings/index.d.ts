@@ -3,8 +3,10 @@
  */
 export * from './public_api';
 export { LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵg } from './core/a11y/live-announcer';
-export { mixinDisabled as ɵo } from './core/common-behaviors/disabled';
+export { mixinDisabled as ɵq } from './core/common-behaviors/disabled';
 export { UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵh } from './core/coordination/unique-selection-dispatcher';
+export { MD_DATE_FORMATS as ɵo } from './core/datetime/date-formats';
+export { MD_NATIVE_DATE_FORMATS as ɵp } from './core/datetime/native-date-formats';
 export { MdMutationObserverFactory as ɵa } from './core/observe-content/observe-content';
 export { OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb } from './core/overlay/overlay-container';
 export { OverlayPositionBuilder as ɵn } from './core/overlay/position/overlay-position-builder';
