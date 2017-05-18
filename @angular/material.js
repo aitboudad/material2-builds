@@ -20,38 +20,22 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import 'rxjs/add/operator/filter';
 import 'rxjs/add/operator/switchMap';
 
-/**
- * Wrapper around Error that sets the error message.
- * \@docs-private
- */
-class MdError extends Error {
-    /**
-     * @param {?} value
-     */
-    constructor(value) {
-        super();
-        this.message = value;
-    }
-}
-
 const MATERIAL_COMPATIBILITY_MODE = new InjectionToken('md-compatibility-mode');
 /**
  * Injection token that configures whether the Material sanity checks are enabled.
  */
 const MATERIAL_SANITY_CHECKS = new InjectionToken('md-sanity-checks');
 /**
- * Exception thrown if the consumer has used an invalid Material prefix on a component.
+ * Returns an exception to be thrown if the consumer has used
+ * an invalid Material prefix on a component.
  * \@docs-private
+ * @param {?} prefix
+ * @param {?} nodeName
+ * @return {?}
  */
-class MdCompatibilityInvalidPrefixError extends MdError {
-    /**
-     * @param {?} prefix
-     * @param {?} nodeName
-     */
-    constructor(prefix, nodeName) {
-        super(`The "${prefix}-" prefix cannot be used in ng-material v1 compatibility mode. ` +
-            `It was used on an "${nodeName.toLowerCase()}" element.`);
-    }
+function getMdCompatibilityInvalidPrefixError(prefix, nodeName) {
+    return new Error(`The "${prefix}-" prefix cannot be used in ng-material v1 compatibility mode. ` +
+        `It was used on an "${nodeName.toLowerCase()}" element.`);
 }
 /**
  * Selector that matches all elements that may have style collisions with AngularJS Material.
@@ -189,7 +173,7 @@ class MatPrefixRejector {
      */
     constructor(isCompatibilityMode, elementRef) {
         if (!isCompatibilityMode) {
-            throw new MdCompatibilityInvalidPrefixError('mat', elementRef.nativeElement.nodeName);
+            throw getMdCompatibilityInvalidPrefixError('mat', elementRef.nativeElement.nodeName);
         }
     }
 }
@@ -213,7 +197,7 @@ class MdPrefixRejector {
      */
     constructor(isCompatibilityMode, elementRef) {
         if (isCompatibilityMode) {
-            throw new MdCompatibilityInvalidPrefixError('md', elementRef.nativeElement.nodeName);
+            throw getMdCompatibilityInvalidPrefixError('md', elementRef.nativeElement.nodeName);
         }
     }
 }
@@ -880,9 +864,7 @@ function distanceToFurthestCorner(x, y, rect) {
 
 // Whether the current platform supports the V8 Break Iterator. The V8 check
 // is necessary to detect all Blink based browsers.
-const hasV8BreakIterator = typeof (window) !== 'undefined' ?
-    (window.Intl && ((window.Intl)).v8BreakIterator) :
-    (typeof (Intl) !== 'undefined' && ((Intl)).v8BreakIterator);
+const hasV8BreakIterator = (typeof (Intl) !== 'undefined' && ((Intl)).v8BreakIterator);
 /**
  * Service to detect the current platform by comparing the userAgent strings and
  * checking browser-specific global properties.
@@ -897,7 +879,7 @@ class Platform {
         this.EDGE = this.isBrowser && /(edge)/i.test(navigator.userAgent);
         this.TRIDENT = this.isBrowser && /(msie|trident)/i.test(navigator.userAgent);
         // EdgeHTML and Trident mock Blink specific things and need to be excluded from this check.
-        this.BLINK = this.isBrowser && !!(window.chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT;
+        this.BLINK = this.isBrowser && !!(((window)).chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT;
         // Webkit is part of the userAgent in EdgeHTML, Blink and Trident. Therefore we need to
         // ensure that Webkit runs standalone and is not used as another engine's base.
         this.WEBKIT = this.isBrowser && /AppleWebKit/i.test(navigator.userAgent) && !this.BLINK && !this.EDGE && !this.TRIDENT;
@@ -1193,8 +1175,10 @@ class ViewportRuler {
         // `scrollTop` and `scrollLeft` is inconsistent. However, using the bounding rect of
         // `document.documentElement` works consistently, where the `top` and `left` values will
         // equal negative the scroll position.
-        const /** @type {?} */ top = -documentRect.top || document.body.scrollTop || window.scrollY || 0;
-        const /** @type {?} */ left = -documentRect.left || document.body.scrollLeft || window.scrollX || 0;
+        const /** @type {?} */ top = -documentRect.top || document.body.scrollTop || window.scrollY ||
+            document.documentElement.scrollTop || 0;
+        const /** @type {?} */ left = -documentRect.left || document.body.scrollLeft || window.scrollX ||
+            document.documentElement.scrollLeft || 0;
         return { top, left };
     }
     /**
@@ -1411,6 +1395,169 @@ Scrollable.ctorParameters = () => [
     { type: NgZone, },
     { type: Renderer2, },
 ];
+
+/**
+ * Strategy that will update the element position as the user is scrolling.
+ */
+class RepositionScrollStrategy {
+    /**
+     * @param {?} _scrollDispatcher
+     * @param {?=} _scrollThrottle
+     */
+    constructor(_scrollDispatcher, _scrollThrottle = 0) {
+        this._scrollDispatcher = _scrollDispatcher;
+        this._scrollThrottle = _scrollThrottle;
+        this._scrollSubscription = null;
+    }
+    /**
+     * @param {?} overlayRef
+     * @return {?}
+     */
+    attach(overlayRef) {
+        this._overlayRef = overlayRef;
+    }
+    /**
+     * @return {?}
+     */
+    enable() {
+        if (!this._scrollSubscription) {
+            this._scrollSubscription = this._scrollDispatcher.scrolled(this._scrollThrottle, () => {
+                this._overlayRef.updatePosition();
+            });
+        }
+    }
+    /**
+     * @return {?}
+     */
+    disable() {
+        if (this._scrollSubscription) {
+            this._scrollSubscription.unsubscribe();
+            this._scrollSubscription = null;
+        }
+    }
+}
+
+/**
+ * Strategy that will close the overlay as soon as the user starts scrolling.
+ */
+class CloseScrollStrategy {
+    /**
+     * @param {?} _scrollDispatcher
+     */
+    constructor(_scrollDispatcher) {
+        this._scrollDispatcher = _scrollDispatcher;
+        this._scrollSubscription = null;
+    }
+    /**
+     * @param {?} overlayRef
+     * @return {?}
+     */
+    attach(overlayRef) {
+        this._overlayRef = overlayRef;
+    }
+    /**
+     * @return {?}
+     */
+    enable() {
+        if (!this._scrollSubscription) {
+            this._scrollSubscription = this._scrollDispatcher.scrolled(null, () => {
+                if (this._overlayRef.hasAttached()) {
+                    this._overlayRef.detach();
+                }
+                this.disable();
+            });
+        }
+    }
+    /**
+     * @return {?}
+     */
+    disable() {
+        if (this._scrollSubscription) {
+            this._scrollSubscription.unsubscribe();
+            this._scrollSubscription = null;
+        }
+    }
+}
+
+/**
+ * Scroll strategy that doesn't do anything.
+ */
+class NoopScrollStrategy {
+    /**
+     * @return {?}
+     */
+    enable() { }
+    /**
+     * @return {?}
+     */
+    disable() { }
+    /**
+     * @return {?}
+     */
+    attach() { }
+}
+
+/**
+ * Strategy that will prevent the user from scrolling while the overlay is visible.
+ */
+class BlockScrollStrategy {
+    /**
+     * @param {?} _viewportRuler
+     */
+    constructor(_viewportRuler) {
+        this._viewportRuler = _viewportRuler;
+        this._previousHTMLStyles = { top: null, left: null };
+        this._isEnabled = false;
+    }
+    /**
+     * @return {?}
+     */
+    attach() { }
+    /**
+     * @return {?}
+     */
+    enable() {
+        if (this._canBeEnabled()) {
+            const /** @type {?} */ root = document.documentElement;
+            this._previousScrollPosition = this._viewportRuler.getViewportScrollPosition();
+            // Cache the previous inline styles in case the user had set them.
+            this._previousHTMLStyles.left = root.style.left;
+            this._previousHTMLStyles.top = root.style.top;
+            // Note: we're using the `html` node, instead of the `body`, because the `body` may
+            // have the user agent margin, whereas the `html` is guaranteed not to have one.
+            root.style.left = `${-this._previousScrollPosition.left}px`;
+            root.style.top = `${-this._previousScrollPosition.top}px`;
+            root.classList.add('cdk-global-scrollblock');
+            this._isEnabled = true;
+        }
+    }
+    /**
+     * @return {?}
+     */
+    disable() {
+        if (this._isEnabled) {
+            this._isEnabled = false;
+            document.documentElement.style.left = this._previousHTMLStyles.left;
+            document.documentElement.style.top = this._previousHTMLStyles.top;
+            document.documentElement.classList.remove('cdk-global-scrollblock');
+            window.scroll(this._previousScrollPosition.left, this._previousScrollPosition.top);
+        }
+    }
+    /**
+     * @return {?}
+     */
+    _canBeEnabled() {
+        // Since the scroll strategies can't be singletons, we have to use a global CSS class
+        // (`cdk-global-scrollblock`) to make sure that we don't try to disable global
+        // scrolling multiple times.
+        if (document.documentElement.classList.contains('cdk-global-scrollblock') || this._isEnabled) {
+            return false;
+        }
+        const /** @type {?} */ body = document.body;
+        const /** @type {?} */ viewport = this._viewportRuler.getViewportRect();
+        return body.scrollHeight > viewport.height || body.scrollWidth > viewport.width;
+    }
+}
 
 class ScrollDispatchModule {
 }
@@ -1744,59 +1891,53 @@ MdOptionModule.decorators = [
 MdOptionModule.ctorParameters = () => [];
 
 /**
- * Exception thrown when attempting to attach a null portal to a host.
+ * Throws an exception when attempting to attach a null portal to a host.
  * \@docs-private
+ * @return {?}
  */
-class NullPortalError extends MdError {
-    constructor() {
-        super('Must provide a portal to attach');
-    }
+function throwNullPortalError() {
+    throw new Error('Must provide a portal to attach');
 }
 /**
- * Exception thrown when attempting to attach a portal to a host that is already attached.
+ * Throws an exception when attempting to attach a portal to a host that is already attached.
  * \@docs-private
+ * @return {?}
  */
-class PortalAlreadyAttachedError extends MdError {
-    constructor() {
-        super('Host already has a portal attached');
-    }
+function throwPortalAlreadyAttachedError() {
+    throw new Error('Host already has a portal attached');
 }
 /**
- * Exception thrown when attempting to attach a portal to an already-disposed host.
+ * Throws an exception when attempting to attach a portal to an already-disposed host.
  * \@docs-private
+ * @return {?}
  */
-class PortalHostAlreadyDisposedError extends MdError {
-    constructor() {
-        super('This PortalHost has already been disposed');
-    }
+function throwPortalHostAlreadyDisposedError() {
+    throw new Error('This PortalHost has already been disposed');
 }
 /**
- * Exception thrown when attempting to attach an unknown portal type.
+ * Throws an exception when attempting to attach an unknown portal type.
  * \@docs-private
+ * @return {?}
  */
-class UnknownPortalTypeError extends MdError {
-    constructor() {
-        super('Attempting to attach an unknown Portal type. ' +
-            'BasePortalHost accepts either a ComponentPortal or a TemplatePortal.');
-    }
+function throwUnknownPortalTypeError() {
+    throw new Error('Attempting to attach an unknown Portal type. BasePortalHost accepts either' +
+        'a ComponentPortal or a TemplatePortal.');
 }
 /**
- * Exception thrown when attempting to attach a portal to a null host.
+ * Throws an exception when attempting to attach a portal to a null host.
  * \@docs-private
+ * @return {?}
  */
-class NullPortalHostError extends MdError {
-    constructor() {
-        super('Attempting to attach a portal to a null PortalHost');
-    }
+function throwNullPortalHostError() {
+    throw new Error('Attempting to attach a portal to a null PortalHost');
 }
 /**
- * Exception thrown when attempting to detach a portal that is not attached.
- * \@docs-private
+ * Throws an exception when attempting to detach a portal that is not attached.
+ * \@docs-privatew
+ * @return {?}
  */
-class NoPortalAttachedError extends MdError {
-    constructor() {
-        super('Attempting to detach a portal that is not attached to a host');
-    }
+function throwNoPortalAttachedError() {
+    throw new Error('Attempting to detach a portal that is not attached to a host');
 }
 
 /**
@@ -1812,10 +1953,10 @@ class Portal {
      */
     attach(host) {
         if (host == null) {
-            throw new NullPortalHostError();
+            throwNullPortalHostError();
         }
         if (host.hasAttached()) {
-            throw new PortalAlreadyAttachedError();
+            throwPortalAlreadyAttachedError();
         }
         this._attachedHost = host;
         return (host.attach(this));
@@ -1827,7 +1968,7 @@ class Portal {
     detach() {
         let /** @type {?} */ host = this._attachedHost;
         if (host == null) {
-            throw new NoPortalAttachedError();
+            throwNoPortalAttachedError();
         }
         this._attachedHost = null;
         return host.detach();
@@ -1933,13 +2074,13 @@ class BasePortalHost {
      */
     attach(portal) {
         if (!portal) {
-            throw new NullPortalError();
+            throwNullPortalError();
         }
         if (this.hasAttached()) {
-            throw new PortalAlreadyAttachedError();
+            throwPortalAlreadyAttachedError();
         }
         if (this._isDisposed) {
-            throw new PortalHostAlreadyDisposedError();
+            throwPortalHostAlreadyDisposedError();
         }
         if (portal instanceof ComponentPortal) {
             this._attachedPortal = portal;
@@ -1949,7 +2090,7 @@ class BasePortalHost {
             this._attachedPortal = portal;
             return this.attachTemplatePortal(portal);
         }
-        throw new UnknownPortalTypeError();
+        throwUnknownPortalTypeError();
     }
     /**
      * @abstract
@@ -2149,24 +2290,6 @@ PortalModule.decorators = [
  * @nocollapse
  */
 PortalModule.ctorParameters = () => [];
-
-/**
- * Scroll strategy that doesn't do anything.
- */
-class NoopScrollStrategy {
-    /**
-     * @return {?}
-     */
-    enable() { }
-    /**
-     * @return {?}
-     */
-    disable() { }
-    /**
-     * @return {?}
-     */
-    attach() { }
-}
 
 /**
  * OverlayState is a bag of values for either the initial configuration or current state of an
@@ -3327,47 +3450,6 @@ const OVERLAY_PROVIDERS = [
 ];
 
 /**
- * Strategy that will update the element position as the user is scrolling.
- */
-class RepositionScrollStrategy {
-    /**
-     * @param {?} _scrollDispatcher
-     * @param {?=} _scrollThrottle
-     */
-    constructor(_scrollDispatcher, _scrollThrottle = 0) {
-        this._scrollDispatcher = _scrollDispatcher;
-        this._scrollThrottle = _scrollThrottle;
-        this._scrollSubscription = null;
-    }
-    /**
-     * @param {?} overlayRef
-     * @return {?}
-     */
-    attach(overlayRef) {
-        this._overlayRef = overlayRef;
-    }
-    /**
-     * @return {?}
-     */
-    enable() {
-        if (!this._scrollSubscription) {
-            this._scrollSubscription = this._scrollDispatcher.scrolled(this._scrollThrottle, () => {
-                this._overlayRef.updatePosition();
-            });
-        }
-    }
-    /**
-     * @return {?}
-     */
-    disable() {
-        if (this._scrollSubscription) {
-            this._scrollSubscription.unsubscribe();
-            this._scrollSubscription = null;
-        }
-    }
-}
-
-/**
  * Default set of positions for the overlay. Follows the behavior of a dropdown.
  */
 let defaultPositionList = [
@@ -4416,48 +4498,6 @@ FullscreenOverlayContainer.decorators = [
  * @nocollapse
  */
 FullscreenOverlayContainer.ctorParameters = () => [];
-
-/**
- * Strategy that will close the overlay as soon as the user starts scrolling.
- */
-class CloseScrollStrategy {
-    /**
-     * @param {?} _scrollDispatcher
-     */
-    constructor(_scrollDispatcher) {
-        this._scrollDispatcher = _scrollDispatcher;
-        this._scrollSubscription = null;
-    }
-    /**
-     * @param {?} overlayRef
-     * @return {?}
-     */
-    attach(overlayRef) {
-        this._overlayRef = overlayRef;
-    }
-    /**
-     * @return {?}
-     */
-    enable() {
-        if (!this._scrollSubscription) {
-            this._scrollSubscription = this._scrollDispatcher.scrolled(null, () => {
-                if (this._overlayRef.hasAttached()) {
-                    this._overlayRef.detach();
-                }
-                this.disable();
-            });
-        }
-    }
-    /**
-     * @return {?}
-     */
-    disable() {
-        if (this._scrollSubscription) {
-            this._scrollSubscription.unsubscribe();
-            this._scrollSubscription = null;
-        }
-    }
-}
 
 class GestureConfig extends HammerGestureConfig {
     constructor() {
@@ -5981,42 +6021,34 @@ MdAutocomplete.propDecorators = {
 
 /**
  * \@docs-private
+ * @return {?}
  */
-class MdInputContainerPlaceholderConflictError extends MdError {
-    constructor() {
-        super('Placeholder attribute and child element were both specified.');
-    }
+function getMdInputContainerPlaceholderConflictError() {
+    return new Error('Placeholder attribute and child element were both specified.');
 }
 /**
  * \@docs-private
+ * @param {?} type
+ * @return {?}
  */
-class MdInputContainerUnsupportedTypeError extends MdError {
-    /**
-     * @param {?} type
-     */
-    constructor(type) {
-        super(`Input type "${type}" isn't supported by md-input-container.`);
-    }
+function getMdInputContainerUnsupportedTypeError(type) {
+    return new Error(`Input type "${type}" isn't supported by md-input-container.`);
 }
 /**
  * \@docs-private
+ * @param {?} align
+ * @return {?}
  */
-class MdInputContainerDuplicatedHintError extends MdError {
-    /**
-     * @param {?} align
-     */
-    constructor(align) {
-        super(`A hint was already declared for 'align="${align}"'.`);
-    }
+function getMdInputContainerDuplicatedHintError(align) {
+    return new Error(`A hint was already declared for 'align="${align}"'.`);
 }
 /**
  * \@docs-private
+ * @return {?}
  */
-class MdInputContainerMissingMdInputError extends MdError {
-    constructor() {
-        super('md-input-container must contain an mdInput directive. Did you forget to add mdInput ' +
-            'to the native input or textarea element?');
-    }
+function getMdInputContainerMissingMdInputError() {
+    return new Error('md-input-container must contain an mdInput directive. ' +
+        'Did you forget to add mdInput to the native input or textarea element?');
 }
 
 // Invalid input type. Using one of these will throw an MdInputContainerUnsupportedTypeError.
@@ -6285,7 +6317,7 @@ class MdInputDirective {
      */
     _validateType() {
         if (MD_INPUT_INVALID_TYPES.indexOf(this._type) !== -1) {
-            throw new MdInputContainerUnsupportedTypeError(this._type);
+            throw getMdInputContainerUnsupportedTypeError(this._type);
         }
     }
     /**
@@ -6434,14 +6466,18 @@ class MdInputContainer {
      * @return {?}
      */
     ngAfterContentInit() {
-        if (!this._mdInputChild) {
-            throw new MdInputContainerMissingMdInputError();
-        }
+        this._validateInputChild();
         this._processHints();
         this._validatePlaceholders();
         // Re-validate when things change.
         this._hintChildren.changes.subscribe(() => this._processHints());
         this._mdInputChild._placeholderChange.subscribe(() => this._validatePlaceholders());
+    }
+    /**
+     * @return {?}
+     */
+    ngAfterContentChecked() {
+        this._validateInputChild();
     }
     /**
      * @return {?}
@@ -6496,7 +6532,7 @@ class MdInputContainer {
      */
     _validatePlaceholders() {
         if (this._mdInputChild.placeholder && this._placeholderChild) {
-            throw new MdInputContainerPlaceholderConflictError();
+            throw getMdInputContainerPlaceholderConflictError();
         }
     }
     /**
@@ -6519,13 +6555,13 @@ class MdInputContainer {
             this._hintChildren.forEach((hint) => {
                 if (hint.align == 'start') {
                     if (startHint || this.hintLabel) {
-                        throw new MdInputContainerDuplicatedHintError('start');
+                        throw getMdInputContainerDuplicatedHintError('start');
                     }
                     startHint = hint;
                 }
                 else if (hint.align == 'end') {
                     if (endHint) {
-                        throw new MdInputContainerDuplicatedHintError('end');
+                        throw getMdInputContainerDuplicatedHintError('end');
                     }
                     endHint = hint;
                 }
@@ -6538,27 +6574,38 @@ class MdInputContainer {
      * @return {?}
      */
     _syncAriaDescribedby() {
-        let /** @type {?} */ ids = [];
-        let /** @type {?} */ startHint = this._hintChildren ?
-            this._hintChildren.find(hint => hint.align === 'start') : null;
-        let /** @type {?} */ endHint = this._hintChildren ?
-            this._hintChildren.find(hint => hint.align === 'end') : null;
-        if (startHint) {
-            ids.push(startHint.id);
+        if (this._mdInputChild) {
+            let /** @type {?} */ ids = [];
+            let /** @type {?} */ startHint = this._hintChildren ?
+                this._hintChildren.find(hint => hint.align === 'start') : null;
+            let /** @type {?} */ endHint = this._hintChildren ?
+                this._hintChildren.find(hint => hint.align === 'end') : null;
+            if (startHint) {
+                ids.push(startHint.id);
+            }
+            else if (this._hintLabel) {
+                ids.push(this._hintLabelId);
+            }
+            if (endHint) {
+                ids.push(endHint.id);
+            }
+            this._mdInputChild.ariaDescribedby = ids.join(' ');
         }
-        else if (this._hintLabel) {
-            ids.push(this._hintLabelId);
+    }
+    /**
+     * Throws an error if the container's input child was removed.
+     * @return {?}
+     */
+    _validateInputChild() {
+        if (!this._mdInputChild) {
+            throw getMdInputContainerMissingMdInputError();
         }
-        if (endHint) {
-            ids.push(endHint.id);
-        }
-        this._mdInputChild.ariaDescribedby = ids.join(' ');
     }
 }
 MdInputContainer.decorators = [
     { type: Component, args: [{selector: 'md-input-container, mat-input-container',
                 template: "<div class=\"mat-input-wrapper\"> <div class=\"mat-input-table\"> <div class=\"mat-input-prefix\" *ngIf=\"_prefixChildren.length\"> <!-- TODO(andrewseguin): remove [md-prefix] --> <ng-content select=\"[mdPrefix], [matPrefix], [md-prefix]\"></ng-content> </div> <div class=\"mat-input-infix\" [class.mat-end]=\"align == 'end'\"> <ng-content selector=\"input, textarea\"></ng-content> <span class=\"mat-input-placeholder-wrapper\"> <label class=\"mat-input-placeholder\" [attr.for]=\"_mdInputChild.id\" [class.mat-empty]=\"_mdInputChild.empty && !_shouldAlwaysFloat\" [class.mat-float]=\"_canPlaceholderFloat\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\" *ngIf=\"_hasPlaceholder()\"> <ng-content select=\"md-placeholder, mat-placeholder\"></ng-content> {{_mdInputChild.placeholder}} <span class=\"mat-placeholder-required\" *ngIf=\"!hideRequiredMarker && _mdInputChild.required\">*</span> </label> </span> </div> <div class=\"mat-input-suffix\" *ngIf=\"_suffixChildren.length\"> <!-- TODO(andrewseguin): remove [md-suffix] --> <ng-content select=\"[mdSuffix], [matSuffix], [md-suffix]\"></ng-content> </div> </div> <div class=\"mat-input-underline\" #underline [class.mat-disabled]=\"_mdInputChild.disabled\"> <span class=\"mat-input-ripple\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\"></span> </div> <div class=\"mat-input-subscript-wrapper\" [ngSwitch]=\"_getDisplayedMessages()\"> <div *ngSwitchCase=\"'error'\" [@transitionMessages]=\"_subscriptAnimationState\"> <ng-content select=\"md-error, mat-error\"></ng-content> </div> <div class=\"mat-input-hint-wrapper\" *ngSwitchCase=\"'hint'\" [@transitionMessages]=\"_subscriptAnimationState\"> <div *ngIf=\"hintLabel\" [id]=\"_hintLabelId\" class=\"mat-hint\">{{hintLabel}}</div> <ng-content select=\"md-hint:not([align='end']), mat-hint:not([align='end'])\"></ng-content> <div class=\"mat-input-hint-spacer\"></div> <ng-content select=\"md-hint[align='end'], mat-hint[align='end']\"></ng-content> </div> </div> </div> ",
-                styles: [".mat-input-container{display:inline-block;position:relative;font-family:Roboto,\"Helvetica Neue\",sans-serif;line-height:normal;text-align:left}[dir=rtl] .mat-input-container{text-align:right}.mat-input-container .mat-datepicker-toggle,.mat-input-container .mat-icon{width:1em;height:1em;font-size:100%;vertical-align:top}.mat-input-wrapper{margin:1em 0;padding-bottom:6px}.mat-input-table{display:inline-table;flex-flow:column;vertical-align:bottom;width:100%}.mat-input-table>*{display:table-cell}.mat-input-infix{position:relative}.mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;width:100%;vertical-align:bottom}.mat-end .mat-input-element{text-align:right}[dir=rtl] .mat-end .mat-input-element{text-align:left}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element:-webkit-autofill+.mat-input-placeholder-wrapper .mat-float{display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%;transition:none}.mat-input-element::placeholder{color:transparent!important}.mat-input-element::-moz-placeholder{color:transparent!important}.mat-input-element::-webkit-input-placeholder{color:transparent!important}.mat-input-element:-ms-input-placeholder{color:transparent!important}.mat-input-placeholder{position:absolute;left:0;top:0;font-size:100%;pointer-events:none;z-index:1;padding-top:1em;width:100%;display:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:translate3d(0,0,0);transform-origin:bottom left;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1)}.mat-input-placeholder.mat-empty{display:block;cursor:text}.mat-focused .mat-input-placeholder.mat-float,.mat-input-placeholder.mat-float:not(.mat-empty){display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%}[dir=rtl] .mat-input-placeholder{transform-origin:bottom right;left:auto;right:0}.mat-input-placeholder:not(.mat-empty){transition:none}.mat-input-placeholder-wrapper{position:absolute;left:0;top:-1em;width:100%;padding-top:1em;overflow:hidden;pointer-events:none;transform:translate3d(0,0,0)}.mat-input-placeholder-wrapper::after{content:'';display:inline-table}.mat-input-underline{position:absolute;height:1px;width:100%;margin-top:4px;border-top-width:1px;border-top-style:solid}.mat-input-underline.mat-disabled{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;border-top:0;background-position:0}.mat-input-underline .mat-input-ripple{position:absolute;height:2px;z-index:1;top:-1px;width:100%;transform-origin:top;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-focused .mat-input-underline .mat-input-ripple{opacity:1}.mat-input-subscript-wrapper{position:absolute;font-size:75%;top:100%;width:100%;margin-top:-1.2em;line-height:1.2em;overflow:hidden}.mat-input-hint-wrapper{display:flex}.mat-input-hint-spacer{flex:1 0 10px}.mat-input-error{display:block}.mat-input-prefix,.mat-input-suffix{width:.1px;white-space:nowrap} /*# sourceMappingURL=input-container.css.map */ "],
+                styles: [".mat-input-container{display:inline-block;position:relative;font-family:Roboto,\"Helvetica Neue\",sans-serif;line-height:normal;text-align:left}[dir=rtl] .mat-input-container{text-align:right}.mat-input-container .mat-datepicker-toggle,.mat-input-container .mat-icon{width:1em;height:1em;font-size:100%;vertical-align:top}.mat-input-wrapper{margin:1em 0;padding-bottom:6px}.mat-input-table{display:inline-table;flex-flow:column;vertical-align:bottom;width:100%}.mat-input-table>*{display:table-cell}.mat-input-infix{position:relative}.mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;width:100%;vertical-align:bottom}.mat-end .mat-input-element{text-align:right}[dir=rtl] .mat-end .mat-input-element{text-align:left}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element:-webkit-autofill+.mat-input-placeholder-wrapper .mat-float{display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%;transition:none}.mat-input-element::placeholder{color:transparent!important}.mat-input-element::-moz-placeholder{color:transparent!important}.mat-input-element::-webkit-input-placeholder{color:transparent!important}.mat-input-element:-ms-input-placeholder{color:transparent!important}.mat-input-placeholder{position:absolute;left:0;top:0;font-size:100%;pointer-events:none;z-index:1;padding-top:1em;width:100%;display:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:translate3d(0,0,0);transform-origin:bottom left;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1)}.mat-input-placeholder.mat-empty{display:block;cursor:text}.mat-focused .mat-input-placeholder.mat-float,.mat-input-placeholder.mat-float:not(.mat-empty){display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%}[dir=rtl] .mat-input-placeholder{transform-origin:bottom right;left:auto;right:0}.mat-input-placeholder:not(.mat-empty){transition:none}.mat-input-placeholder-wrapper{position:absolute;left:0;top:-1em;width:100%;padding-top:1em;overflow:hidden;pointer-events:none;transform:translate3d(0,0,0)}.mat-input-placeholder-wrapper::after{content:'';display:inline-table}.mat-input-underline{position:absolute;height:1px;width:100%;margin-top:4px;border-top-width:1px;border-top-style:solid}.mat-input-underline.mat-disabled{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;border-top:0;background-position:0}.mat-input-underline .mat-input-ripple{position:absolute;height:2px;z-index:1;top:-1px;width:100%;transform-origin:50%;transform:scaleX(.5);visibility:hidden;transition:background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-focused .mat-input-underline .mat-input-ripple,.mat-input-invalid .mat-input-underline .mat-input-ripple{visibility:visible;transform:scaleX(1);transition:transform 150ms linear,background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-input-subscript-wrapper{position:absolute;font-size:75%;top:100%;width:100%;margin-top:-1.2em;line-height:1.2em;overflow:hidden}.mat-input-hint-wrapper{display:flex}.mat-input-hint-spacer{flex:1 0 10px}.mat-input-error{display:block}.mat-input-prefix,.mat-input-suffix{width:.1px;white-space:nowrap} /*# sourceMappingURL=input-container.css.map */ "],
                 animations: [
                     trigger('transitionMessages', [
                         state('enter', style({ opacity: 1, transform: 'translateY(0%)' })),
@@ -6761,9 +6808,12 @@ class MdAutocompleteTrigger {
     get _outsideClickStream() {
         if (this._document) {
             return Observable.fromEvent(this._document, 'click').filter((event) => {
-                let /** @type {?} */ clickTarget = (event.target);
+                const /** @type {?} */ clickTarget = (event.target);
+                const /** @type {?} */ inputContainer = this._inputContainer ?
+                    this._inputContainer._elementRef.nativeElement : null;
                 return this._panelOpen &&
-                    !(this._inputContainer ? this._inputContainer._elementRef : this._element).nativeElement.contains(clickTarget) &&
+                    clickTarget !== this._element.nativeElement &&
+                    (!inputContainer || !inputContainer.contains(clickTarget)) &&
                     !this._overlayRef.overlayElement.contains(clickTarget);
             });
         }
@@ -7976,7 +8026,7 @@ MdSlider.decorators = [
                     '[class.mat-slider-hide-last-tick]': 'disabled || _isMinValue && _thumbGap && _invertAxis',
                 },
                 template: "<div class=\"mat-slider-wrapper\"> <div class=\"mat-slider-track-wrapper\"> <div class=\"mat-slider-track-background\" [ngStyle]=\"_trackBackgroundStyles\"></div> <div class=\"mat-slider-track-fill\" [ngStyle]=\"_trackFillStyles\"></div> </div> <div class=\"mat-slider-ticks-container\" [ngStyle]=\"_ticksContainerStyles\"> <div class=\"mat-slider-ticks\" [ngStyle]=\"_ticksStyles\"></div> </div> <div class=\"mat-slider-thumb-container\" [ngStyle]=\"_thumbContainerStyles\"> <div class=\"mat-slider-focus-ring\"></div> <div class=\"mat-slider-thumb\"></div> <div class=\"mat-slider-thumb-label\"> <span class=\"mat-slider-thumb-label-text\">{{displayValue}}</span> </div> </div> </div> ",
-                styles: [".mat-slider{display:inline-block;position:relative;box-sizing:border-box;padding:8px;outline:0;vertical-align:middle}.mat-slider-wrapper{position:absolute}.mat-slider-track-wrapper{position:absolute;top:0;left:0;overflow:hidden}.mat-slider-track-fill{position:absolute;transform-origin:0 0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-track-background{position:absolute;transform-origin:100% 100%;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-ticks-container{position:absolute;left:0;top:0;overflow:hidden}.mat-slider-ticks{box-sizing:border-box;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-container{position:absolute;z-index:1;transition:transform .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-focus-ring{position:absolute;width:30px;height:30px;border-radius:50%;transform:scale(0);opacity:0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),opacity .4s cubic-bezier(.25,.8,.25,1)}.cdk-keyboard-focused .mat-slider-focus-ring{transform:scale(1);opacity:1}.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label{cursor:-webkit-grab;cursor:grab}.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb-label,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label:active,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb:active{cursor:-webkit-grabbing;cursor:grabbing}.mat-slider-thumb{position:absolute;right:-10px;bottom:-10px;box-sizing:border-box;width:20px;height:20px;border:3px solid transparent;border-radius:50%;transform:scale(.7);transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),border-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label{display:none;align-items:center;justify-content:center;position:absolute;width:28px;height:28px;border-radius:50%;transition:transform .4s cubic-bezier(.25,.8,.25,1),border-radius .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label-text{z-index:1;font-size:12px;font-weight:700;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-sliding .mat-slider-thumb-container,.mat-slider-sliding .mat-slider-track-background,.mat-slider-sliding .mat-slider-track-fill{transition-duration:0s}.mat-slider-has-ticks .mat-slider-wrapper::after{content:'';position:absolute;border:0 solid rgba(0,0,0,.6);opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after,.mat-slider-has-ticks:hover:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after{opacity:1}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-disabled) .mat-slider-ticks,.mat-slider-has-ticks:hover:not(.mat-slider-disabled) .mat-slider-ticks{opacity:1}.mat-slider-thumb-label-showing .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-thumb-label-showing .mat-slider-thumb-label{display:flex}.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:100% 100%}.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:0 0}.cdk-focused.mat-slider-thumb-label-showing .mat-slider-thumb{transform:scale(0)}.cdk-focused .mat-slider-thumb-label{border-radius:50% 50% 0}.cdk-focused .mat-slider-thumb-label-text{opacity:1}.cdk-mouse-focused .mat-slider-thumb,.cdk-program-focused .mat-slider-thumb,.cdk-touch-focused .mat-slider-thumb{border-width:2px;transform:scale(1)}.mat-slider-disabled .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-disabled .mat-slider-thumb{border-width:4px;transform:scale(.5)}.mat-slider-disabled .mat-slider-thumb-label{display:none}.mat-slider-horizontal{height:48px;min-width:128px}.mat-slider-horizontal .mat-slider-wrapper{height:2px;top:23px;left:8px;right:8px}.mat-slider-horizontal .mat-slider-wrapper::after{height:2px;border-left-width:2px;right:0;top:0}.mat-slider-horizontal .mat-slider-track-wrapper{height:2px;width:100%}.mat-slider-horizontal .mat-slider-track-fill{height:2px;width:100%;transform:scaleX(0)}.mat-slider-horizontal .mat-slider-track-background{height:2px;width:100%;transform:scaleX(1)}.mat-slider-horizontal .mat-slider-ticks-container{height:2px;width:100%}.mat-slider-horizontal .mat-slider-ticks{background:repeating-linear-gradient(to right,rgba(0,0,0,.6),rgba(0,0,0,.6) 2px,transparent 0,transparent) repeat;background:-moz-repeating-linear-gradient(.0001deg,rgba(0,0,0,.6),rgba(0,0,0,.6) 2px,transparent 0,transparent) repeat;background-clip:content-box;height:2px;width:100%}.mat-slider-horizontal .mat-slider-thumb-container{width:100%;height:0;top:50%}.mat-slider-horizontal .mat-slider-focus-ring{top:-15px;right:-15px}.mat-slider-horizontal .mat-slider-thumb-label{right:-14px;top:-40px;transform:translateY(26px) scale(.01) rotate(45deg)}.mat-slider-horizontal .mat-slider-thumb-label-text{transform:rotate(-45deg)}.mat-slider-horizontal.cdk-focused .mat-slider-thumb-label{transform:rotate(45deg)}.mat-slider-vertical{width:48px;min-height:128px}.mat-slider-vertical .mat-slider-wrapper{width:2px;top:8px;bottom:8px;left:23px}.mat-slider-vertical .mat-slider-wrapper::after{width:2px;border-top-width:2px;bottom:0;left:0}.mat-slider-vertical .mat-slider-track-wrapper{height:100%;width:2px}.mat-slider-vertical .mat-slider-track-fill{height:100%;width:2px;transform:scaleY(0)}.mat-slider-vertical .mat-slider-track-background{height:100%;width:2px;transform:scaleY(1)}.mat-slider-vertical .mat-slider-ticks-container{width:2px;height:100%}.mat-slider-vertical .mat-slider-focus-ring{bottom:-15px;left:-15px}.mat-slider-vertical .mat-slider-ticks{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.6),rgba(0,0,0,.6) 2px,transparent 0,transparent) repeat;background-clip:content-box;width:2px;height:100%}.mat-slider-vertical .mat-slider-thumb-container{height:100%;width:0;left:50%}.mat-slider-vertical .mat-slider-thumb-label{bottom:-14px;left:-40px;transform:translateX(26px) scale(.01) rotate(-45deg)}.mat-slider-vertical .mat-slider-thumb-label-text{transform:rotate(45deg)}.mat-slider-vertical.cdk-focused .mat-slider-thumb-label{transform:rotate(-45deg)}[dir=rtl] .mat-slider-wrapper::after{left:0;right:auto}[dir=rtl] .mat-slider-horizontal .mat-slider-track-fill{transform-origin:100% 100%}[dir=rtl] .mat-slider-horizontal .mat-slider-track-background{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:100% 100%} /*# sourceMappingURL=slider.css.map */ "],
+                styles: [".mat-slider{display:inline-block;position:relative;box-sizing:border-box;padding:8px;outline:0;vertical-align:middle}.mat-slider-wrapper{position:absolute}.mat-slider-track-wrapper{position:absolute;top:0;left:0;overflow:hidden}.mat-slider-track-fill{position:absolute;transform-origin:0 0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-track-background{position:absolute;transform-origin:100% 100%;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-ticks-container{position:absolute;left:0;top:0;overflow:hidden}.mat-slider-ticks{background-repeat:repeat;background-clip:content-box;box-sizing:border-box;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-container{position:absolute;z-index:1;transition:transform .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-focus-ring{position:absolute;width:30px;height:30px;border-radius:50%;transform:scale(0);opacity:0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),opacity .4s cubic-bezier(.25,.8,.25,1)}.cdk-keyboard-focused .mat-slider-focus-ring{transform:scale(1);opacity:1}.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label{cursor:-webkit-grab;cursor:grab}.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb-label,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label:active,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb:active{cursor:-webkit-grabbing;cursor:grabbing}.mat-slider-thumb{position:absolute;right:-10px;bottom:-10px;box-sizing:border-box;width:20px;height:20px;border:3px solid transparent;border-radius:50%;transform:scale(.7);transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),border-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label{display:none;align-items:center;justify-content:center;position:absolute;width:28px;height:28px;border-radius:50%;transition:transform .4s cubic-bezier(.25,.8,.25,1),border-radius .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label-text{z-index:1;font-size:12px;font-weight:700;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-sliding .mat-slider-thumb-container,.mat-slider-sliding .mat-slider-track-background,.mat-slider-sliding .mat-slider-track-fill{transition-duration:0s}.mat-slider-has-ticks .mat-slider-wrapper::after{content:'';position:absolute;border-width:0;border-style:solid;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after,.mat-slider-has-ticks:hover:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after{opacity:1}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-disabled) .mat-slider-ticks,.mat-slider-has-ticks:hover:not(.mat-slider-disabled) .mat-slider-ticks{opacity:1}.mat-slider-thumb-label-showing .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-thumb-label-showing .mat-slider-thumb-label{display:flex}.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:100% 100%}.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:0 0}.cdk-focused.mat-slider-thumb-label-showing .mat-slider-thumb{transform:scale(0)}.cdk-focused .mat-slider-thumb-label{border-radius:50% 50% 0}.cdk-focused .mat-slider-thumb-label-text{opacity:1}.cdk-mouse-focused .mat-slider-thumb,.cdk-program-focused .mat-slider-thumb,.cdk-touch-focused .mat-slider-thumb{border-width:2px;transform:scale(1)}.mat-slider-disabled .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-disabled .mat-slider-thumb{border-width:4px;transform:scale(.5)}.mat-slider-disabled .mat-slider-thumb-label{display:none}.mat-slider-horizontal{height:48px;min-width:128px}.mat-slider-horizontal .mat-slider-wrapper{height:2px;top:23px;left:8px;right:8px}.mat-slider-horizontal .mat-slider-wrapper::after{height:2px;border-left-width:2px;right:0;top:0}.mat-slider-horizontal .mat-slider-track-wrapper{height:2px;width:100%}.mat-slider-horizontal .mat-slider-track-fill{height:2px;width:100%;transform:scaleX(0)}.mat-slider-horizontal .mat-slider-track-background{height:2px;width:100%;transform:scaleX(1)}.mat-slider-horizontal .mat-slider-ticks-container{height:2px;width:100%}.mat-slider-horizontal .mat-slider-ticks{height:2px;width:100%}.mat-slider-horizontal .mat-slider-thumb-container{width:100%;height:0;top:50%}.mat-slider-horizontal .mat-slider-focus-ring{top:-15px;right:-15px}.mat-slider-horizontal .mat-slider-thumb-label{right:-14px;top:-40px;transform:translateY(26px) scale(.01) rotate(45deg)}.mat-slider-horizontal .mat-slider-thumb-label-text{transform:rotate(-45deg)}.mat-slider-horizontal.cdk-focused .mat-slider-thumb-label{transform:rotate(45deg)}.mat-slider-vertical{width:48px;min-height:128px}.mat-slider-vertical .mat-slider-wrapper{width:2px;top:8px;bottom:8px;left:23px}.mat-slider-vertical .mat-slider-wrapper::after{width:2px;border-top-width:2px;bottom:0;left:0}.mat-slider-vertical .mat-slider-track-wrapper{height:100%;width:2px}.mat-slider-vertical .mat-slider-track-fill{height:100%;width:2px;transform:scaleY(0)}.mat-slider-vertical .mat-slider-track-background{height:100%;width:2px;transform:scaleY(1)}.mat-slider-vertical .mat-slider-ticks-container{width:2px;height:100%}.mat-slider-vertical .mat-slider-focus-ring{bottom:-15px;left:-15px}.mat-slider-vertical .mat-slider-ticks{width:2px;height:100%}.mat-slider-vertical .mat-slider-thumb-container{height:100%;width:0;left:50%}.mat-slider-vertical .mat-slider-thumb-label{bottom:-14px;left:-40px;transform:translateX(26px) scale(.01) rotate(-45deg)}.mat-slider-vertical .mat-slider-thumb-label-text{transform:rotate(45deg)}.mat-slider-vertical.cdk-focused .mat-slider-thumb-label{transform:rotate(-45deg)}[dir=rtl] .mat-slider-wrapper::after{left:0;right:auto}[dir=rtl] .mat-slider-horizontal .mat-slider-track-fill{transform-origin:100% 100%}[dir=rtl] .mat-slider-horizontal .mat-slider-track-background{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:100% 100%} /*# sourceMappingURL=slider.css.map */ "],
                 inputs: ['disabled'],
                 encapsulation: ViewEncapsulation.None,
             },] },
@@ -8052,19 +8102,6 @@ MdSliderModule.decorators = [
 MdSliderModule.ctorParameters = () => [];
 
 /**
- * Exception thrown when a tooltip has an invalid position.
- * \@docs-private
- */
-class MdTooltipInvalidPositionError extends MdError {
-    /**
-     * @param {?} position
-     */
-    constructor(position) {
-        super(`Tooltip position "${position}" is invalid.`);
-    }
-}
-
-/**
  * Time in ms to delay before changing the tooltip visibility to hidden
  */
 const TOUCHEND_HIDE_DELAY = 1500;
@@ -8072,6 +8109,14 @@ const TOUCHEND_HIDE_DELAY = 1500;
  * Time in ms to throttle repositioning after scroll events.
  */
 const SCROLL_THROTTLE_MS = 20;
+/**
+ * Throws an error if the user supplied an invalid tooltip position.
+ * @param {?} position
+ * @return {?}
+ */
+function throwMdTooltipInvalidPositionError(position) {
+    throw new Error(`Tooltip position "${position}" is invalid.`);
+}
 /**
  * Directive that attaches a material design tooltip to the host element. Animates the showing and
  * hiding of a tooltip provided position (defaults to below the element).
@@ -8313,6 +8358,7 @@ class MdTooltip {
             }
         });
         let /** @type {?} */ config = new OverlayState();
+        config.direction = this._dir ? this._dir.value : 'ltr';
         config.positionStrategy = strategy;
         config.scrollStrategy =
             new RepositionScrollStrategy(this._scrollDispatcher, SCROLL_THROTTLE_MS);
@@ -8346,7 +8392,7 @@ class MdTooltip {
             this.position == 'before' && !isDirectionLtr) {
             return { originX: 'end', originY: 'center' };
         }
-        throw new MdTooltipInvalidPositionError(this.position);
+        throwMdTooltipInvalidPositionError(this.position);
     }
     /**
      * Returns the overlay position based on the user's preference
@@ -8370,7 +8416,7 @@ class MdTooltip {
             this.position == 'before' && !isLtr) {
             return { overlayX: 'start', overlayY: 'center' };
         }
-        throw new MdTooltipInvalidPositionError(this.position);
+        throwMdTooltipInvalidPositionError(this.position);
     }
     /**
      * Updates the tooltip message and repositions the overlay according to the new message length
@@ -8538,7 +8584,7 @@ class TooltipComponent {
             case 'below':
                 this._transformOrigin = 'top';
                 break;
-            default: throw new MdTooltipInvalidPositionError(value);
+            default: throwMdTooltipInvalidPositionError(value);
         }
     }
     /**
@@ -8623,5 +8669,5 @@ MdTooltipModule.ctorParameters = () => [];
  * Generated bundle index. Do not edit.
  */
 
-export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, MdError, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ScrollDispatcher, GlobalPositionStrategy, ConnectedPositionStrategy, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, MdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, NativeDateAdapter, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdInputModule, MdTextareaAutosize, MdPlaceholder, MdHint, MdErrorDirective, MdPrefix, MdSuffix, MdInputDirective, MdInputContainer, MdInputContainerPlaceholderConflictError, MdInputContainerUnsupportedTypeError, MdInputContainerDuplicatedHintError, MdInputContainerMissingMdInputError, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵg, mixinDisabled as ɵq, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵh, MD_DATE_FORMATS as ɵo, MD_NATIVE_DATE_FORMATS as ɵp, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵn, VIEWPORT_RULER_PROVIDER as ɵm, VIEWPORT_RULER_PROVIDER_FACTORY as ɵl, ViewportRuler as ɵk, ScrollDispatchModule as ɵi, SCROLL_DISPATCHER_PROVIDER as ɵe, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵd, Scrollable as ɵj, RippleRenderer as ɵf };
+export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdInputModule, MdTextareaAutosize, MdPlaceholder, MdHint, MdErrorDirective, MdPrefix, MdSuffix, MdInputDirective, MdInputContainer, getMdInputContainerPlaceholderConflictError, getMdInputContainerUnsupportedTypeError, getMdInputContainerDuplicatedHintError, getMdInputContainerMissingMdInputError, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, throwMdTooltipInvalidPositionError, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵi, mixinDisabled as ɵl, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵj, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵk, VIEWPORT_RULER_PROVIDER as ɵe, VIEWPORT_RULER_PROVIDER_FACTORY as ɵd, SCROLL_DISPATCHER_PROVIDER as ɵg, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵf, RippleRenderer as ɵh };
 //# sourceMappingURL=material.js.map

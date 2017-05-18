@@ -330,6 +330,19 @@ $mat-elevation-transition-timing-function: $mat-fast-out-slow-in-timing-function
   .cdk-overlay-transparent-backdrop {
     background: none;
   }
+
+  // Used when disabling global scrolling.
+  .cdk-global-scrollblock {
+    position: fixed;
+
+    // Necessary for iOS not to expand past the viewport.
+    max-width: 100vw;
+
+    // Note: this will always add a scrollbar to whatever element it is on, which can
+    // potentially result in double scrollbars. It shouldn't be an issue, because we won't
+    // block scrolling on a page that doesn't have a scrollbar in the first place.
+    overflow-y: scroll;
+  }
 }
 
 // Color palettes from the Material Design spec.
@@ -1013,32 +1026,36 @@ $mat-dark-theme-background: (
 
 // Foreground palette for light themes.
 $mat-light-theme-foreground: (
-  base:            black,
-  divider:         $black-12-opacity,
-  dividers:        $black-12-opacity,
-  disabled:        rgba(black, 0.38),
-  disabled-button: rgba(black, 0.38),
-  disabled-text:   rgba(black, 0.38),
-  hint-text:       rgba(black, 0.38),
-  secondary-text:  rgba(black, 0.54),
-  icon:            rgba(black, 0.54),
-  icons:           rgba(black, 0.54),
-  text:            rgba(black, 0.87)
+  base:              black,
+  divider:           $black-12-opacity,
+  dividers:          $black-12-opacity,
+  disabled:          rgba(black, 0.38),
+  disabled-button:   rgba(black, 0.38),
+  disabled-text:     rgba(black, 0.38),
+  hint-text:         rgba(black, 0.38),
+  secondary-text:    rgba(black, 0.54),
+  icon:              rgba(black, 0.54),
+  icons:             rgba(black, 0.54),
+  text:              rgba(black, 0.87),
+  slider-off:        rgba(black, 0.26),
+  slider-off-active: rgba(black, 0.38),
 );
 
 // Foreground palette for dark themes.
 $mat-dark-theme-foreground: (
-  base:            white,
-  divider:         $white-12-opacity,
-  dividers:        $white-12-opacity,
-  disabled:        rgba(white, 0.3),
-  disabled-button: rgba(white, 0.3),
-  disabled-text:   rgba(white, 0.3),
-  hint-text:       rgba(white, 0.3),
-  secondary-text:  rgba(white, 0.7),
-  icon:            white,
-  icons:           white,
-  text:            white
+  base:              white,
+  divider:           $white-12-opacity,
+  dividers:          $white-12-opacity,
+  disabled:          rgba(white, 0.3),
+  disabled-button:   rgba(white, 0.3),
+  disabled-text:     rgba(white, 0.3),
+  hint-text:         rgba(white, 0.3),
+  secondary-text:    rgba(white, 0.7),
+  icon:              white,
+  icons:             white,
+  text:              white,
+  slider-off:        rgba(white, 0.3),
+  slider-off-active: rgba(white, 0.3),
 );
 
 
@@ -1437,6 +1454,8 @@ $mat-menu-icon-margin: 16px !default;
   $warn: map-get($theme, warn);
 
   .mat-option {
+    color: mat-color($foreground, text);
+
     &:hover:not(.mat-option-disabled), &:focus:not(.mat-option-disabled) {
       background: mat-color($background, hover);
     }
@@ -1816,6 +1835,10 @@ $mat-menu-icon-margin: 16px !default;
         border-color: $disabled-color;
       }
     }
+
+    .mat-checkbox-label {
+      color: $disabled-color;
+    }
   }
 
   .mat-checkbox:not(.mat-checkbox-disabled) {
@@ -1895,8 +1918,87 @@ $mat-menu-icon-margin: 16px !default;
   }
 }
 
-// /*** IMPORTED FILE NOT FOUND ***/
-@import '../../datepicker/datepicker-theme';/*** --- ***/
+// 
+
+
+
+@mixin mat-datepicker-theme($theme) {
+  $primary: map-get($theme, primary);
+  $foreground: map-get($theme, foreground);
+  $background: map-get($theme, background);
+
+  $mat-datepicker-selected-today-box-shadow-width: 1px;
+  $mat-datepicker-selected-fade-amount: 0.6;
+  $mat-datepicker-today-fade-amount: 0.2;
+
+  .mat-calendar {
+    background-color: mat-color($background, card);
+  }
+
+  .mat-calendar-arrow {
+    border-top-color: mat-color($foreground, icon);
+  }
+
+  .mat-calendar-next-button,
+  .mat-calendar-previous-button {
+    color: mat-color($foreground, icon);
+  }
+
+  .mat-calendar-table-header {
+    color: mat-color($foreground, hint-text);
+  }
+
+  .mat-calendar-table-header-divider::after {
+    background: mat-color($foreground, divider);
+  }
+
+  .mat-calendar-body-label {
+    color: mat-color($foreground, secondary-text);
+  }
+
+  .mat-calendar-body-cell-content {
+    color: mat-color($foreground, text);
+    border-color: transparent;
+
+    .mat-calendar-body-disabled > &:not(.mat-calendar-body-selected) {
+      color: mat-color($foreground, disabled-text);
+    }
+  }
+
+  :not(.mat-calendar-body-disabled):hover,
+  .cdk-keyboard-focused .mat-calendar-body-active {
+    & > .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+      background-color: mat-color($background, hover);
+    }
+  }
+
+  .mat-calendar-body-selected {
+    background-color: mat-color($primary);
+    color: mat-color($primary, default-contrast);
+  }
+
+  .mat-calendar-body-disabled > .mat-calendar-body-selected {
+    background-color: fade-out(mat-color($primary), $mat-datepicker-selected-fade-amount);
+  }
+
+  .mat-calendar-body-today {
+    &:not(.mat-calendar-body-selected) {
+      // Note: though it's not text, the border is a hint about the fact that this is today's date,
+      // so we use the hint color.
+      border-color: mat-color($foreground, hint-text);
+    }
+
+    &.mat-calendar-body-selected {
+      box-shadow: inset 0 0 0 $mat-datepicker-selected-today-box-shadow-width
+                  mat-color($primary, default-contrast);
+    }
+  }
+
+  .mat-calendar-body-disabled > .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+    border-color: fade-out(mat-color($foreground, hint-text), $mat-datepicker-today-fade-amount);
+  }
+}
+
 // 
 
 
@@ -2006,10 +2108,6 @@ $mat-menu-icon-margin: 16px !default;
       color: $input-underline-color-warn;
     }
 
-    .mat-input-underline {
-      border-color: $input-underline-color-warn;
-    }
-
     .mat-input-ripple {
       background-color: $input-underline-color-warn;
     }
@@ -2090,7 +2188,7 @@ $mat-menu-icon-margin: 16px !default;
   $warn: map-get($theme, warn);
 
   .mat-progress-bar-background {
-    background: #{_mat-progress-bar-buffer($primary, lighter)};
+    background-image: #{_mat-progress-bar-buffer($primary, lighter)};
   }
 
   .mat-progress-bar-buffer {
@@ -2103,12 +2201,13 @@ $mat-menu-icon-margin: 16px !default;
 
   .mat-progress-bar.mat-accent {
     .mat-progress-bar-background {
-      background: #{_mat-progress-bar-buffer($accent, lighter)};
+      background-image: #{_mat-progress-bar-buffer($accent, lighter)};
     }
 
     .mat-progress-bar-buffer {
       background-color: mat-color($accent, lighter);
     }
+
     .mat-progress-bar-fill::after {
       background-color: mat-color($accent);
     }
@@ -2116,12 +2215,13 @@ $mat-menu-icon-margin: 16px !default;
 
   .mat-progress-bar.mat-warn {
     .mat-progress-bar-background {
-      background: #{_mat-progress-bar-buffer($warn, lighter)};
+      background-image: #{_mat-progress-bar-buffer($warn, lighter)};
     }
 
     .mat-progress-bar-buffer {
       background-color: mat-color($warn, lighter);
     }
+
     .mat-progress-bar-fill::after {
       background-color: mat-color($warn);
     }
@@ -2217,6 +2317,10 @@ $mat-menu-icon-margin: 16px !default;
   .mat-radio-disabled {
     .mat-radio-ripple .mat-ripple-element, .mat-radio-inner-circle {
       background-color: mat-color($foreground, disabled);
+    }
+
+    .mat-radio-label-content {
+      color: mat-color($foreground, disabled);
     }
   }
 }
@@ -2428,14 +2532,18 @@ $mat-menu-icon-margin: 16px !default;
   $primary: map-get($theme, primary);
   $accent: map-get($theme, accent);
   $warn: map-get($theme, warn);
+  $background: map-get($theme, background);
+  $foreground: map-get($theme, foreground);
 
-  $mat-slider-off-color: rgba(black, 0.26);
-  $mat-slider-off-focused-color: rgba(black, 0.38);
-  $mat-slider-disabled-color: rgba(black, 0.26);
-  $mat-slider-labeled-min-value-thumb-color: black;
-  $mat-slider-labeled-min-value-thumb-label-color: rgba(black, 0.26);
-  $mat-slider-focus-ring-color: rgba(mat-color($accent), 0.2);
-  $mat-slider-focus-ring-min-value-color: rgba(black, 0.12);
+  $mat-slider-off-color: mat-color($foreground, slider-off);
+  $mat-slider-off-focused-color: mat-color($foreground, slider-off-active);
+  $mat-slider-disabled-color: mat-color($foreground, slider-off);
+  $mat-slider-labeled-min-value-thumb-color: mat-color($foreground, base);
+  $mat-slider-labeled-min-value-thumb-label-color: mat-color($foreground, slider-off);
+  $mat-slider-focus-ring-color: mat-color($accent, default, 0.2);
+  $mat-slider-focus-ring-min-value-color: mat-color($foreground, base, 0.12);
+  $mat-slider-tick-color: mat-color($foreground, base, 0.7);
+  $mat-slider-tick-size: 2px;
 
   .mat-slider-track-background {
     background-color: $mat-slider-off-color;
@@ -2514,6 +2622,24 @@ $mat-menu-icon-margin: 16px !default;
         }
       }
     }
+  }
+
+  .mat-slider-has-ticks .mat-slider-wrapper::after {
+    border-color: $mat-slider-tick-color;
+  }
+
+  .mat-slider-horizontal .mat-slider-ticks {
+    background-image: repeating-linear-gradient(to right, $mat-slider-tick-color,
+        $mat-slider-tick-color $mat-slider-tick-size, transparent 0, transparent);
+    // Firefox doesn't draw the gradient correctly with 'to right'
+    // (see https://bugzilla.mozilla.org/show_bug.cgi?id=1314319).
+    background-image: -moz-repeating-linear-gradient(0.0001deg, $mat-slider-tick-color,
+        $mat-slider-tick-color $mat-slider-tick-size, transparent 0, transparent);
+  }
+
+  .mat-slider-vertical .mat-slider-ticks {
+    background-image: repeating-linear-gradient(to bottom, $mat-slider-tick-color,
+        $mat-slider-tick-color $mat-slider-tick-size, transparent 0, transparent);
   }
 }
 
