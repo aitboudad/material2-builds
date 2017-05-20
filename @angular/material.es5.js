@@ -13,7 +13,7 @@ var __extends = (this && this.__extends) || (function () {
   * Copyright (c) 2017 Google, Inc. https://material.angular.io/
   * License: MIT
   */
-import { ApplicationRef, ChangeDetectorRef, Component, ComponentFactoryResolver, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, Host, HostBinding, Inject, Injectable, InjectionToken, Injector, Input, NgModule, NgZone, Optional, Output, Renderer2, Self, SkipSelf, TemplateRef, ViewChild, ViewContainerRef, ViewEncapsulation, forwardRef, isDevMode } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, ComponentFactoryResolver, ContentChildren, Directive, ElementRef, EventEmitter, HostBinding, Inject, Injectable, InjectionToken, Injector, Input, NgModule, NgZone, Optional, Output, Renderer2, SkipSelf, TemplateRef, ViewChild, ViewContainerRef, ViewEncapsulation, forwardRef, isDevMode } from '@angular/core';
 import { DOCUMENT, HAMMER_GESTURE_CONFIG, HammerGestureConfig } from '@angular/platform-browser';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/debounceTime';
@@ -25,10 +25,10 @@ import 'rxjs/add/observable/merge';
 import 'rxjs/add/operator/auditTime';
 import 'rxjs/add/operator/first';
 import 'rxjs/add/observable/of';
-import { FormGroupDirective, FormsModule, NG_VALUE_ACCESSOR, NgControl, NgForm } from '@angular/forms';
-import { animate, state, style, transition, trigger } from '@angular/animations';
+import { FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import 'rxjs/add/operator/filter';
 import 'rxjs/add/operator/switchMap';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 var MATERIAL_COMPATIBILITY_MODE = new InjectionToken('md-compatibility-mode');
 /**
  * Injection token that configures whether the Material sanity checks are enabled.
@@ -804,10 +804,12 @@ var Platform = /*@__PURE__*/(function () {
         this.EDGE = this.isBrowser && /(edge)/i.test(navigator.userAgent);
         this.TRIDENT = this.isBrowser && /(msie|trident)/i.test(navigator.userAgent);
         // EdgeHTML and Trident mock Blink specific things and need to be excluded from this check.
-        this.BLINK = this.isBrowser && !!(((window)).chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT;
+        this.BLINK = this.isBrowser &&
+            (!!(((window)).chrome || hasV8BreakIterator) && !!CSS && !this.EDGE && !this.TRIDENT);
         // Webkit is part of the userAgent in EdgeHTML, Blink and Trident. Therefore we need to
         // ensure that Webkit runs standalone and is not used as another engine's base.
-        this.WEBKIT = this.isBrowser && /AppleWebKit/i.test(navigator.userAgent) && !this.BLINK && !this.EDGE && !this.TRIDENT;
+        this.WEBKIT = this.isBrowser &&
+            /AppleWebKit/i.test(navigator.userAgent) && !this.BLINK && !this.EDGE && !this.TRIDENT;
         /**
          * Browsers and Platform Types
          */
@@ -3069,7 +3071,6 @@ var ConnectedPositionStrategy = /*@__PURE__*/(function () {
      * @return {?}
      */
     ConnectedPositionStrategy.prototype._setElementPosition = function (element, overlayRect, overlayPoint, pos) {
-        var /** @type {?} */ viewport = this._viewportRuler.getViewportRect();
         // We want to set either `top` or `bottom` based on whether the overlay wants to appear above
         // or below the origin and the direction in which the element will expand.
         var /** @type {?} */ verticalStyleProperty = pos.overlayY === 'bottom' ? 'bottom' : 'top';
@@ -3077,7 +3078,7 @@ var ConnectedPositionStrategy = /*@__PURE__*/(function () {
         // from the bottom of the viewport rather than the top.
         var /** @type {?} */ y = verticalStyleProperty === 'top' ?
             overlayPoint.y :
-            viewport.height - (overlayPoint.y + overlayRect.height);
+            document.documentElement.clientHeight - (overlayPoint.y + overlayRect.height);
         // We want to set either `left` or `right` based on whether the overlay wants to appear "before"
         // or "after" the origin, which determines the direction in which the element will expand.
         // For the horizontal axis, the meaning of "before" and "after" change based on whether the
@@ -3093,7 +3094,7 @@ var ConnectedPositionStrategy = /*@__PURE__*/(function () {
         // from the right edge of the viewport rather than the left edge.
         var /** @type {?} */ x = horizontalStyleProperty === 'left' ?
             overlayPoint.x :
-            viewport.width - (overlayPoint.x + overlayRect.width);
+            document.documentElement.clientWidth - (overlayPoint.x + overlayRect.width);
         // Reset any existing styles. This is necessary in case the preferred position has
         // changed since the last `apply`.
         ['top', 'bottom', 'left', 'right'].forEach(function (p) { return element.style[p] = null; });
@@ -4185,6 +4186,13 @@ var FocusTrap = /*@__PURE__*/(function () {
         });
     };
     /**
+     * @return {?}
+     */
+    FocusTrap.prototype.focusInitialElementWhenReady = function () {
+        var _this = this;
+        this._ngZone.onMicrotaskEmpty.first().subscribe(function () { return _this.focusInitialElement(); });
+    };
+    /**
      * Waits for microtask queue to empty, then focuses
      * the first tabbable element within the focus trap region.
      * @return {?}
@@ -4203,12 +4211,43 @@ var FocusTrap = /*@__PURE__*/(function () {
         this._ngZone.onMicrotaskEmpty.first().subscribe(function () { return _this.focusLastTabbableElement(); });
     };
     /**
+     * Get the specified boundary element of the trapped region.
+     * @param {?} bound The boundary to get (start or end of trapped region).
+     * @return {?} The boundary element.
+     */
+    FocusTrap.prototype._getRegionBoundary = function (bound) {
+        var /** @type {?} */ markers = Array.prototype.slice.call(this._element.querySelectorAll("[cdk-focus-region-" + bound + "]")).concat(Array.prototype.slice.call(this._element.querySelectorAll("[cdk-focus-" + bound + "]")));
+        markers.forEach(function (el) {
+            if (el.hasAttribute("cdk-focus-" + bound)) {
+                console.warn("Found use of deprecated attribute 'cdk-focus-" + bound + "'," +
+                    (" use 'cdk-focus-region-" + bound + "' instead."), el);
+            }
+        });
+        if (bound == 'start') {
+            return markers.length ? markers[0] : this._getFirstTabbableElement(this._element);
+        }
+        return markers.length ?
+            markers[markers.length - 1] : this._getLastTabbableElement(this._element);
+    };
+    /**
+     * Focuses the element that should be focused when the focus trap is initialized.
+     * @return {?}
+     */
+    FocusTrap.prototype.focusInitialElement = function () {
+        var /** @type {?} */ redirectToElement = (this._element.querySelector('[cdk-focus-initial]'));
+        if (redirectToElement) {
+            redirectToElement.focus();
+        }
+        else {
+            this.focusFirstTabbableElement();
+        }
+    };
+    /**
      * Focuses the first tabbable element within the focus trap region.
      * @return {?}
      */
     FocusTrap.prototype.focusFirstTabbableElement = function () {
-        var /** @type {?} */ redirectToElement = (this._element.querySelector('[cdk-focus-start]')) ||
-            this._getFirstTabbableElement(this._element);
+        var /** @type {?} */ redirectToElement = this._getRegionBoundary('start');
         if (redirectToElement) {
             redirectToElement.focus();
         }
@@ -4218,14 +4257,7 @@ var FocusTrap = /*@__PURE__*/(function () {
      * @return {?}
      */
     FocusTrap.prototype.focusLastTabbableElement = function () {
-        var /** @type {?} */ focusTargets = this._element.querySelectorAll('[cdk-focus-end]');
-        var /** @type {?} */ redirectToElement = null;
-        if (focusTargets.length) {
-            redirectToElement = (focusTargets[focusTargets.length - 1]);
-        }
-        else {
-            redirectToElement = this._getLastTabbableElement(this._element);
-        }
+        var /** @type {?} */ redirectToElement = this._getRegionBoundary('end');
         if (redirectToElement) {
             redirectToElement.focus();
         }
@@ -5330,516 +5362,6 @@ function coerceNumberProperty(value, fallbackValue) {
     // '123hello' to be a valid number. Therefore we also check if Number(value) is NaN.
     return isNaN(parseFloat(/** @type {?} */ (value))) || isNaN(Number(value)) ? fallbackValue : Number(value);
 }
-/**
- * Adapts type `D` to be usable as a date by cdk-based components that work with dates.
- * @abstract
- */
-var DateAdapter = /*@__PURE__*/(function () {
-    function DateAdapter() {
-    }
-    /**
-     * Gets the year component of the given date.
-     * @abstract
-     * @param {?} date The date to extract the year from.
-     * @return {?} The year component.
-     */
-    DateAdapter.prototype.getYear = function (date) { };
-    /**
-     * Gets the month component of the given date.
-     * @abstract
-     * @param {?} date The date to extract the month from.
-     * @return {?} The month component (0-indexed, 0 = January).
-     */
-    DateAdapter.prototype.getMonth = function (date) { };
-    /**
-     * Gets the date of the month component of the given date.
-     * @abstract
-     * @param {?} date The date to extract the date of the month from.
-     * @return {?} The month component (1-indexed, 1 = first of month).
-     */
-    DateAdapter.prototype.getDate = function (date) { };
-    /**
-     * Gets the day of the week component of the given date.
-     * @abstract
-     * @param {?} date The date to extract the day of the week from.
-     * @return {?} The month component (0-indexed, 0 = Sunday).
-     */
-    DateAdapter.prototype.getDayOfWeek = function (date) { };
-    /**
-     * Gets a list of names for the months.
-     * @abstract
-     * @param {?} style The naming style (e.g. long = 'January', short = 'Jan', narrow = 'J').
-     * @return {?} An ordered list of all month names, starting with January.
-     */
-    DateAdapter.prototype.getMonthNames = function (style$$1) { };
-    /**
-     * Gets a list of names for the dates of the month.
-     * @abstract
-     * @return {?} An ordered list of all date of the month names, starting with '1'.
-     */
-    DateAdapter.prototype.getDateNames = function () { };
-    /**
-     * Gets a list of names for the days of the week.
-     * @abstract
-     * @param {?} style The naming style (e.g. long = 'Sunday', short = 'Sun', narrow = 'S').
-     * @return {?} An ordered list of all weekday names, starting with Sunday.
-     */
-    DateAdapter.prototype.getDayOfWeekNames = function (style$$1) { };
-    /**
-     * Gets the name for the year of the given date.
-     * @abstract
-     * @param {?} date The date to get the year name for.
-     * @return {?} The name of the given year (e.g. '2017').
-     */
-    DateAdapter.prototype.getYearName = function (date) { };
-    /**
-     * Gets the first day of the week.
-     * @abstract
-     * @return {?} The first day of the week (0-indexed, 0 = Sunday).
-     */
-    DateAdapter.prototype.getFirstDayOfWeek = function () { };
-    /**
-     * Gets the number of days in the month of the given date.
-     * @abstract
-     * @param {?} date The date whose month should be checked.
-     * @return {?} The number of days in the month of the given date.
-     */
-    DateAdapter.prototype.getNumDaysInMonth = function (date) { };
-    /**
-     * Clones the given date.
-     * @abstract
-     * @param {?} date The date to clone
-     * @return {?} A new date equal to the given date.
-     */
-    DateAdapter.prototype.clone = function (date) { };
-    /**
-     * Creates a date with the given year, month, and date. Does not allow over/under-flow of the
-     * month and date.
-     * @abstract
-     * @param {?} year The full year of the date. (e.g. 89 means the year 89, not the year 1989).
-     * @param {?} month The month of the date (0-indexed, 0 = January). Must be an integer 0 - 11.
-     * @param {?} date The date of month of the date. Must be an integer 1 - length of the given month.
-     * @return {?} The new date, or null if invalid.
-     */
-    DateAdapter.prototype.createDate = function (year, month, date) { };
-    /**
-     * Gets today's date.
-     * @abstract
-     * @return {?} Today's date.
-     */
-    DateAdapter.prototype.today = function () { };
-    /**
-     * Parses a date from a value.
-     * @abstract
-     * @param {?} value The value to parse.
-     * @param {?} parseFormat The expected format of the value being parsed
-     *     (type is implementation-dependent).
-     * @return {?} The parsed date, or null if date could not be parsed.
-     */
-    DateAdapter.prototype.parse = function (value, parseFormat) { };
-    /**
-     * Formats a date as a string.
-     * @abstract
-     * @param {?} date The value to parse.
-     * @param {?} displayFormat The format to use to display the date as a string.
-     * @return {?} The parsed date, or null if date could not be parsed.
-     */
-    DateAdapter.prototype.format = function (date, displayFormat) { };
-    /**
-     * Adds the given number of years to the date. Years are counted as if flipping 12 pages on the
-     * calendar for each year and then finding the closest date in the new month. For example when
-     * adding 1 year to Feb 29, 2016, the resulting date will be Feb 28, 2017.
-     * @abstract
-     * @param {?} date The date to add years to.
-     * @param {?} years The number of years to add (may be negative).
-     * @return {?} A new date equal to the given one with the specified number of years added.
-     */
-    DateAdapter.prototype.addCalendarYears = function (date, years) { };
-    /**
-     * Adds the given number of months to the date. Months are counted as if flipping a page on the
-     * calendar for each month and then finding the closest date in the new month. For example when
-     * adding 1 month to Jan 31, 2017, the resulting date will be Feb 28, 2017.
-     * @abstract
-     * @param {?} date The date to add months to.
-     * @param {?} months The number of months to add (may be negative).
-     * @return {?} A new date equal to the given one with the specified number of months added.
-     */
-    DateAdapter.prototype.addCalendarMonths = function (date, months) { };
-    /**
-     * Adds the given number of days to the date. Days are counted as if moving one cell on the
-     * calendar for each day.
-     * @abstract
-     * @param {?} date The date to add days to.
-     * @param {?} days The number of days to add (may be negative).
-     * @return {?} A new date equal to the given one with the specified number of days added.
-     */
-    DateAdapter.prototype.addCalendarDays = function (date, days) { };
-    /**
-     * Gets the RFC 3339 compatible date string (https://tools.ietf.org/html/rfc3339)  for the given
-     * date.
-     * @abstract
-     * @param {?} date The date to get the ISO date string for.
-     * @return {?} The ISO date string date string.
-     */
-    DateAdapter.prototype.getISODateString = function (date) { };
-    /**
-     * Sets the locale used for all dates.
-     * @param {?} locale The new locale.
-     * @return {?}
-     */
-    DateAdapter.prototype.setLocale = function (locale) {
-        this.locale = locale;
-    };
-    /**
-     * Compares two dates.
-     * @param {?} first The first date to compare.
-     * @param {?} second The second date to compare.
-     * @return {?} 0 if the dates are equal, a number less than 0 if the first date is earlier,
-     *     a number greater than 0 if the first date is later.
-     */
-    DateAdapter.prototype.compareDate = function (first, second) {
-        return this.getYear(first) - this.getYear(second) ||
-            this.getMonth(first) - this.getMonth(second) ||
-            this.getDate(first) - this.getDate(second);
-    };
-    /**
-     * Checks if two dates are equal.
-     * @param {?} first The first date to check.
-     * @param {?} second The second date to check.
-     *     Null dates are considered equal to other null dates.
-     * @return {?}
-     */
-    DateAdapter.prototype.sameDate = function (first, second) {
-        return first && second ? !this.compareDate(first, second) : first == second;
-    };
-    /**
-     * Clamp the given date between min and max dates.
-     * @param {?} date The date to clamp.
-     * @param {?=} min The minimum value to allow. If null or omitted no min is enforced.
-     * @param {?=} max The maximum value to allow. If null or omitted no max is enforced.
-     * @return {?} `min` if `date` is less than `min`, `max` if date is greater than `max`,
-     *     otherwise `date`.
-     */
-    DateAdapter.prototype.clampDate = function (date, min, max) {
-        if (min && this.compareDate(date, min) < 0) {
-            return min;
-        }
-        if (max && this.compareDate(date, max) > 0) {
-            return max;
-        }
-        return date;
-    };
-    return DateAdapter;
-}());
-/**
- * Whether the browser supports the Intl API.
- */
-var SUPPORTS_INTL_API = typeof Intl != 'undefined';
-/**
- * The default month names to use if Intl API is not available.
- */
-var DEFAULT_MONTH_NAMES = {
-    'long': [
-        'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
-        'October', 'November', 'December'
-    ],
-    'short': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    'narrow': ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
-};
-/**
- * The default date names to use if Intl API is not available.
- */
-var DEFAULT_DATE_NAMES = range(31, function (i) { return String(i + 1); });
-/**
- * The default day of the week names to use if Intl API is not available.
- */
-var DEFAULT_DAY_OF_WEEK_NAMES = {
-    'long': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    'short': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-    'narrow': ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-};
-/**
- * Creates an array and fills it with values.
- * @template T
- * @param {?} length
- * @param {?} valueFunction
- * @return {?}
- */
-function range(length, valueFunction) {
-    return Array.apply(null, Array(length)).map(function (v, i) { return valueFunction(i); });
-}
-/**
- * Adapts the native JS Date for use with cdk-based components that work with dates.
- */
-var NativeDateAdapter = /*@__PURE__*/(function (_super) {
-    __extends(NativeDateAdapter, _super);
-    function NativeDateAdapter() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getYear = function (date) {
-        return date.getFullYear();
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getMonth = function (date) {
-        return date.getMonth();
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getDate = function (date) {
-        return date.getDate();
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getDayOfWeek = function (date) {
-        return date.getDay();
-    };
-    /**
-     * @param {?} style
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getMonthNames = function (style$$1) {
-        var _this = this;
-        if (SUPPORTS_INTL_API) {
-            var /** @type {?} */ dtf_1 = new Intl.DateTimeFormat(this.locale, { month: style$$1 });
-            return range(12, function (i) { return _this._stripDirectionalityCharacters(dtf_1.format(new Date(2017, i, 1))); });
-        }
-        return DEFAULT_MONTH_NAMES[style$$1];
-    };
-    /**
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getDateNames = function () {
-        var _this = this;
-        if (SUPPORTS_INTL_API) {
-            var /** @type {?} */ dtf_2 = new Intl.DateTimeFormat(this.locale, { day: 'numeric' });
-            return range(31, function (i) { return _this._stripDirectionalityCharacters(dtf_2.format(new Date(2017, 0, i + 1))); });
-        }
-        return DEFAULT_DATE_NAMES;
-    };
-    /**
-     * @param {?} style
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getDayOfWeekNames = function (style$$1) {
-        var _this = this;
-        if (SUPPORTS_INTL_API) {
-            var /** @type {?} */ dtf_3 = new Intl.DateTimeFormat(this.locale, { weekday: style$$1 });
-            return range(7, function (i) { return _this._stripDirectionalityCharacters(dtf_3.format(new Date(2017, 0, i + 1))); });
-        }
-        return DEFAULT_DAY_OF_WEEK_NAMES[style$$1];
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getYearName = function (date) {
-        if (SUPPORTS_INTL_API) {
-            var /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, { year: 'numeric' });
-            return this._stripDirectionalityCharacters(dtf.format(date));
-        }
-        return String(this.getYear(date));
-    };
-    /**
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getFirstDayOfWeek = function () {
-        // We can't tell using native JS Date what the first day of the week is, we default to Sunday.
-        return 0;
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getNumDaysInMonth = function (date) {
-        return this.getDate(this._createDateWithOverflow(this.getYear(date), this.getMonth(date) + 1, 0));
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.clone = function (date) {
-        return this.createDate(this.getYear(date), this.getMonth(date), this.getDate(date));
-    };
-    /**
-     * @param {?} year
-     * @param {?} month
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.createDate = function (year, month, date) {
-        // Check for invalid month and date (except upper bound on date which we have to check after
-        // creating the Date).
-        if (month < 0 || month > 11 || date < 1) {
-            return null;
-        }
-        var /** @type {?} */ result = this._createDateWithOverflow(year, month, date);
-        // Check that the date wasn't above the upper bound for the month, causing the month to
-        // overflow.
-        if (result.getMonth() != month) {
-            return null;
-        }
-        return result;
-    };
-    /**
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.today = function () {
-        return new Date();
-    };
-    /**
-     * @param {?} value
-     * @param {?} parseFormat
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.parse = function (value, parseFormat) {
-        // We have no way using the native JS Date to set the parse format or locale, so we ignore these
-        // parameters.
-        var /** @type {?} */ timestamp = typeof value == 'number' ? value : Date.parse(value);
-        return isNaN(timestamp) ? null : new Date(timestamp);
-    };
-    /**
-     * @param {?} date
-     * @param {?} displayFormat
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.format = function (date, displayFormat) {
-        if (SUPPORTS_INTL_API) {
-            var /** @type {?} */ dtf = new Intl.DateTimeFormat(this.locale, displayFormat);
-            return this._stripDirectionalityCharacters(dtf.format(date));
-        }
-        return this._stripDirectionalityCharacters(date.toDateString());
-    };
-    /**
-     * @param {?} date
-     * @param {?} years
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.addCalendarYears = function (date, years) {
-        return this.addCalendarMonths(date, years * 12);
-    };
-    /**
-     * @param {?} date
-     * @param {?} months
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.addCalendarMonths = function (date, months) {
-        var /** @type {?} */ newDate = this._createDateWithOverflow(this.getYear(date), this.getMonth(date) + months, this.getDate(date));
-        // It's possible to wind up in the wrong month if the original month has more days than the new
-        // month. In this case we want to go to the last day of the desired month.
-        // Note: the additional + 12 % 12 ensures we end up with a positive number, since JS % doesn't
-        // guarantee this.
-        if (this.getMonth(newDate) != ((this.getMonth(date) + months) % 12 + 12) % 12) {
-            newDate = this._createDateWithOverflow(this.getYear(newDate), this.getMonth(newDate), 0);
-        }
-        return newDate;
-    };
-    /**
-     * @param {?} date
-     * @param {?} days
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.addCalendarDays = function (date, days) {
-        return this._createDateWithOverflow(this.getYear(date), this.getMonth(date), this.getDate(date) + days);
-    };
-    /**
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype.getISODateString = function (date) {
-        return [
-            date.getUTCFullYear(),
-            this._2digit(date.getUTCMonth() + 1),
-            this._2digit(date.getUTCDate())
-        ].join('-');
-    };
-    /**
-     * Creates a date but allows the month and date to overflow.
-     * @param {?} year
-     * @param {?} month
-     * @param {?} date
-     * @return {?}
-     */
-    NativeDateAdapter.prototype._createDateWithOverflow = function (year, month, date) {
-        var /** @type {?} */ result = new Date(year, month, date);
-        // We need to correct for the fact that JS native Date treats years in range [0, 99] as
-        // abbreviations for 19xx.
-        if (year >= 0 && year < 100) {
-            result.setFullYear(this.getYear(result) - 1900);
-        }
-        return result;
-    };
-    /**
-     * Pads a number to make it two digits.
-     * @param {?} n The number to pad.
-     * @return {?} The padded number.
-     */
-    NativeDateAdapter.prototype._2digit = function (n) {
-        return ('00' + n).slice(-2);
-    };
-    /**
-     * Strip out unicode LTR and RTL characters. Edge and IE insert these into formatted dates while
-     * other browsers do not. We remove them to make output consistent and because they interfere with
-     * date parsing.
-     * @param {?} s The string to strip direction characters from.
-     * @return {?} The stripped string.
-     */
-    NativeDateAdapter.prototype._stripDirectionalityCharacters = function (s) {
-        return s.replace(/[\u200e\u200f]/g, '');
-    };
-    return NativeDateAdapter;
-}(DateAdapter));
-var MD_DATE_FORMATS = new InjectionToken('md-date-formats');
-var MD_NATIVE_DATE_FORMATS = {
-    parse: {
-        dateInput: null,
-    },
-    display: {
-        dateInput: { year: 'numeric', month: 'numeric', day: 'numeric' },
-        monthYearLabel: { year: 'numeric', month: 'short' },
-        dateA11yLabel: { year: 'numeric', month: 'long', day: 'numeric' },
-        monthYearA11yLabel: { year: 'numeric', month: 'long' },
-    }
-};
-var NativeDateModule = /*@__PURE__*/(function () {
-    function NativeDateModule() {
-    }
-    return NativeDateModule;
-}());
-NativeDateModule.decorators = [
-    { type: NgModule, args: [{
-                providers: [{ provide: DateAdapter, useClass: NativeDateAdapter }],
-            },] },
-];
-/**
- * @nocollapse
- */
-NativeDateModule.ctorParameters = function () { return []; };
-var MdNativeDateModule = /*@__PURE__*/(function () {
-    function MdNativeDateModule() {
-    }
-    return MdNativeDateModule;
-}());
-MdNativeDateModule.decorators = [
-    { type: NgModule, args: [{
-                imports: [NativeDateModule],
-                providers: [{ provide: MD_DATE_FORMATS, useValue: MD_NATIVE_DATE_FORMATS }],
-            },] },
-];
-/**
- * @nocollapse
- */
-MdNativeDateModule.ctorParameters = function () { return []; };
 var MdCoreModule = /*@__PURE__*/(function () {
     function MdCoreModule() {
     }
@@ -6191,716 +5713,7 @@ MdAutocomplete.propDecorators = {
     'options': [{ type: ContentChildren, args: [MdOption,] },],
     'displayWith': [{ type: Input },],
 };
-/**
- * \@docs-private
- * @return {?}
- */
-function getMdInputContainerPlaceholderConflictError() {
-    return new Error('Placeholder attribute and child element were both specified.');
-}
-/**
- * \@docs-private
- * @param {?} type
- * @return {?}
- */
-function getMdInputContainerUnsupportedTypeError(type) {
-    return new Error("Input type \"" + type + "\" isn't supported by md-input-container.");
-}
-/**
- * \@docs-private
- * @param {?} align
- * @return {?}
- */
-function getMdInputContainerDuplicatedHintError(align) {
-    return new Error("A hint was already declared for 'align=\"" + align + "\"'.");
-}
-/**
- * \@docs-private
- * @return {?}
- */
-function getMdInputContainerMissingMdInputError() {
-    return new Error('md-input-container must contain an mdInput directive. ' +
-        'Did you forget to add mdInput to the native input or textarea element?');
-}
-// Invalid input type. Using one of these will throw an MdInputContainerUnsupportedTypeError.
-var MD_INPUT_INVALID_TYPES = [
-    'button',
-    'checkbox',
-    'color',
-    'file',
-    'hidden',
-    'image',
-    'radio',
-    'range',
-    'reset',
-    'submit'
-];
-var nextUniqueId$1 = 0;
-/**
- * The placeholder directive. The content can declare this to implement more
- * complex placeholders.
- */
-var MdPlaceholder = /*@__PURE__*/(function () {
-    function MdPlaceholder() {
-    }
-    return MdPlaceholder;
-}());
-MdPlaceholder.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-placeholder, mat-placeholder'
-            },] },
-];
-/**
- * @nocollapse
- */
-MdPlaceholder.ctorParameters = function () { return []; };
-/**
- * Hint text to be shown underneath the input.
- */
-var MdHint = /*@__PURE__*/(function () {
-    function MdHint() {
-        // Whether to align the hint label at the start or end of the line.
-        this.align = 'start';
-        // Unique ID for the hint. Used for the aria-describedby on the input.
-        this.id = "md-input-hint-" + nextUniqueId$1++;
-    }
-    return MdHint;
-}());
-MdHint.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-hint, mat-hint',
-                host: {
-                    '[class.mat-hint]': 'true',
-                    '[class.mat-right]': 'align == "end"',
-                    '[attr.id]': 'id',
-                }
-            },] },
-];
-/**
- * @nocollapse
- */
-MdHint.ctorParameters = function () { return []; };
-MdHint.propDecorators = {
-    'align': [{ type: Input },],
-    'id': [{ type: Input },],
-};
-/**
- * Single error message to be shown underneath the input.
- */
-var MdErrorDirective = /*@__PURE__*/(function () {
-    function MdErrorDirective() {
-    }
-    return MdErrorDirective;
-}());
-MdErrorDirective.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-error, mat-error',
-                host: {
-                    '[class.mat-input-error]': 'true'
-                }
-            },] },
-];
-/**
- * @nocollapse
- */
-MdErrorDirective.ctorParameters = function () { return []; };
-/**
- * Prefix to be placed the the front of the input.
- */
-var MdPrefix = /*@__PURE__*/(function () {
-    function MdPrefix() {
-    }
-    return MdPrefix;
-}());
-MdPrefix.decorators = [
-    { type: Directive, args: [{
-                selector: '[mdPrefix], [matPrefix], [md-prefix]'
-            },] },
-];
-/**
- * @nocollapse
- */
-MdPrefix.ctorParameters = function () { return []; };
-/**
- * Suffix to be placed at the end of the input.
- */
-var MdSuffix = /*@__PURE__*/(function () {
-    function MdSuffix() {
-    }
-    return MdSuffix;
-}());
-MdSuffix.decorators = [
-    { type: Directive, args: [{
-                selector: '[mdSuffix], [matSuffix], [md-suffix]'
-            },] },
-];
-/**
- * @nocollapse
- */
-MdSuffix.ctorParameters = function () { return []; };
-/**
- * Marker for the input element that `MdInputContainer` is wrapping.
- */
-var MdInputDirective = /*@__PURE__*/(function () {
-    /**
-     * @param {?} _elementRef
-     * @param {?} _renderer
-     * @param {?} _ngControl
-     */
-    function MdInputDirective(_elementRef, _renderer, _ngControl) {
-        this._elementRef = _elementRef;
-        this._renderer = _renderer;
-        this._ngControl = _ngControl;
-        /**
-         * Variables used as cache for getters and setters.
-         */
-        this._type = 'text';
-        this._placeholder = '';
-        this._disabled = false;
-        this._required = false;
-        /**
-         * Whether the element is focused or not.
-         */
-        this.focused = false;
-        /**
-         * Emits an event when the placeholder changes so that the `md-input-container` can re-validate.
-         */
-        this._placeholderChange = new EventEmitter();
-        this._neverEmptyInputTypes = [
-            'date',
-            'datetime',
-            'datetime-local',
-            'month',
-            'time',
-            'week'
-        ].filter(function (t) { return getSupportedInputTypes().has(t); });
-        // Force setter to be called in case id was not specified.
-        this.id = this.id;
-    }
-    Object.defineProperty(MdInputDirective.prototype, "disabled", {
-        /**
-         * Whether the element is disabled.
-         * @return {?}
-         */
-        get: function () {
-            return this._ngControl ? this._ngControl.disabled : this._disabled;
-        },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._disabled = coerceBooleanProperty(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "id", {
-        /**
-         * Unique id of the element.
-         * @return {?}
-         */
-        get: function () { return this._id; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this._id = value || this._uid; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "placeholder", {
-        /**
-         * Placeholder attribute of the element.
-         * @return {?}
-         */
-        get: function () { return this._placeholder; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            if (this._placeholder !== value) {
-                this._placeholder = value;
-                this._placeholderChange.emit(this._placeholder);
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "required", {
-        /**
-         * Whether the element is required.
-         * @return {?}
-         */
-        get: function () { return this._required; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this._required = coerceBooleanProperty(value); },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "type", {
-        /**
-         * Input type of the element.
-         * @return {?}
-         */
-        get: function () { return this._type; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._type = value || 'text';
-            this._validateType();
-            // When using Angular inputs, developers are no longer able to set the properties on the native
-            // input element. To ensure that bindings for `type` work, we need to sync the setter
-            // with the native property. Textarea elements don't support the type property or attribute.
-            if (!this._isTextarea() && getSupportedInputTypes().has(this._type)) {
-                this._renderer.setProperty(this._elementRef.nativeElement, 'type', this._type);
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "value", {
-        /**
-         * The input element's value.
-         * @return {?}
-         */
-        get: function () { return this._elementRef.nativeElement.value; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this._elementRef.nativeElement.value = value; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "empty", {
-        /**
-         * @return {?}
-         */
-        get: function () {
-            return !this._isNeverEmpty() &&
-                (this.value == null || this.value === '') &&
-                // Check if the input contains bad input. If so, we know that it only appears empty because
-                // the value failed to parse. From the user's perspective it is not empty.
-                // TODO(mmalerba): Add e2e test for bad input case.
-                !this._isBadInput();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputDirective.prototype, "_uid", {
-        /**
-         * @return {?}
-         */
-        get: function () { return this._cachedUid = this._cachedUid || "md-input-" + nextUniqueId$1++; },
-        enumerable: true,
-        configurable: true
-    });
-    /**
-     * Focuses the input element.
-     * @return {?}
-     */
-    MdInputDirective.prototype.focus = function () { this._elementRef.nativeElement.focus(); };
-    /**
-     * @return {?}
-     */
-    MdInputDirective.prototype._onFocus = function () { this.focused = true; };
-    /**
-     * @return {?}
-     */
-    MdInputDirective.prototype._onBlur = function () { this.focused = false; };
-    /**
-     * @return {?}
-     */
-    MdInputDirective.prototype._onInput = function () {
-        // This is a noop function and is used to let Angular know whenever the value changes.
-        // Angular will run a new change detection each time the `input` event has been dispatched.
-        // It's necessary that Angular recognizes the value change, because when floatingLabel
-        // is set to false and Angular forms aren't used, the placeholder won't recognize the
-        // value changes and will not disappear.
-        // Listening to the input event wouldn't be necessary when the input is using the
-        // FormsModule or ReactiveFormsModule, because Angular forms also listens to input events.
-    };
-    /**
-     * Make sure the input is a supported type.
-     * @return {?}
-     */
-    MdInputDirective.prototype._validateType = function () {
-        if (MD_INPUT_INVALID_TYPES.indexOf(this._type) !== -1) {
-            throw getMdInputContainerUnsupportedTypeError(this._type);
-        }
-    };
-    /**
-     * @return {?}
-     */
-    MdInputDirective.prototype._isNeverEmpty = function () { return this._neverEmptyInputTypes.indexOf(this._type) !== -1; };
-    /**
-     * @return {?}
-     */
-    MdInputDirective.prototype._isBadInput = function () {
-        return ((this._elementRef.nativeElement)).validity.badInput;
-    };
-    /**
-     * Determines if the component host is a textarea. If not recognizable it returns false.
-     * @return {?}
-     */
-    MdInputDirective.prototype._isTextarea = function () {
-        var /** @type {?} */ nativeElement = this._elementRef.nativeElement;
-        return nativeElement ? nativeElement.nodeName.toLowerCase() === 'textarea' : false;
-    };
-    return MdInputDirective;
-}());
-MdInputDirective.decorators = [
-    { type: Directive, args: [{
-                selector: "input[mdInput], textarea[mdInput], input[matInput], textarea[matInput]",
-                host: {
-                    '[class.mat-input-element]': 'true',
-                    // Native input properties that are overwritten by Angular inputs need to be synced with
-                    // the native input element. Otherwise property bindings for those don't work.
-                    '[id]': 'id',
-                    '[placeholder]': 'placeholder',
-                    '[disabled]': 'disabled',
-                    '[required]': 'required',
-                    '[attr.aria-describedby]': 'ariaDescribedby || null',
-                    '(blur)': '_onBlur()',
-                    '(focus)': '_onFocus()',
-                    '(input)': '_onInput()',
-                }
-            },] },
-];
-/**
- * @nocollapse
- */
-MdInputDirective.ctorParameters = function () { return [
-    { type: ElementRef, },
-    { type: Renderer2, },
-    { type: NgControl, decorators: [{ type: Optional }, { type: Self },] },
-]; };
-MdInputDirective.propDecorators = {
-    'disabled': [{ type: Input },],
-    'id': [{ type: Input },],
-    'placeholder': [{ type: Input },],
-    'required': [{ type: Input },],
-    'type': [{ type: Input },],
-    '_placeholderChange': [{ type: Output },],
-};
-/**
- * Container for text inputs that applies Material Design styling and behavior.
- */
-var MdInputContainer = /*@__PURE__*/(function () {
-    /**
-     * @param {?} _elementRef
-     * @param {?} _changeDetectorRef
-     * @param {?} _parentForm
-     * @param {?} _parentFormGroup
-     */
-    function MdInputContainer(_elementRef, _changeDetectorRef, _parentForm, _parentFormGroup) {
-        this._elementRef = _elementRef;
-        this._changeDetectorRef = _changeDetectorRef;
-        this._parentForm = _parentForm;
-        this._parentFormGroup = _parentFormGroup;
-        /**
-         * Alignment of the input container's content.
-         */
-        this.align = 'start';
-        /**
-         * Color of the input divider, based on the theme.
-         */
-        this.color = 'primary';
-        /**
-         * State of the md-hint and md-error animations.
-         */
-        this._subscriptAnimationState = '';
-        this._hintLabel = '';
-        // Unique id for the hint label.
-        this._hintLabelId = "md-input-hint-" + nextUniqueId$1++;
-        this._floatPlaceholder = 'auto';
-    }
-    Object.defineProperty(MdInputContainer.prototype, "dividerColor", {
-        /**
-         * @deprecated Use color instead.
-         * @return {?}
-         */
-        get: function () { return this.color; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this.color = value; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputContainer.prototype, "hideRequiredMarker", {
-        /**
-         * Whether we should hide the required marker.
-         * @return {?}
-         */
-        get: function () { return this._hideRequiredMarker; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._hideRequiredMarker = coerceBooleanProperty(value);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputContainer.prototype, "_shouldAlwaysFloat", {
-        /**
-         * Whether the floating label should always float or not.
-         * @return {?}
-         */
-        get: function () { return this._floatPlaceholder === 'always'; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputContainer.prototype, "_canPlaceholderFloat", {
-        /**
-         * Whether the placeholder can float or not.
-         * @return {?}
-         */
-        get: function () { return this._floatPlaceholder !== 'never'; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputContainer.prototype, "hintLabel", {
-        /**
-         * Text for the input hint.
-         * @return {?}
-         */
-        get: function () { return this._hintLabel; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._hintLabel = value;
-            this._processHints();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdInputContainer.prototype, "floatPlaceholder", {
-        /**
-         * Whether the placeholder should always float, never float or float as the user types.
-         * @return {?}
-         */
-        get: function () { return this._floatPlaceholder; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._floatPlaceholder = value || 'auto';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    /**
-     * @return {?}
-     */
-    MdInputContainer.prototype.ngAfterContentInit = function () {
-        var _this = this;
-        this._validateInputChild();
-        this._processHints();
-        this._validatePlaceholders();
-        // Re-validate when things change.
-        this._hintChildren.changes.subscribe(function () { return _this._processHints(); });
-        this._mdInputChild._placeholderChange.subscribe(function () { return _this._validatePlaceholders(); });
-    };
-    /**
-     * @return {?}
-     */
-    MdInputContainer.prototype.ngAfterContentChecked = function () {
-        this._validateInputChild();
-    };
-    /**
-     * @return {?}
-     */
-    MdInputContainer.prototype.ngAfterViewInit = function () {
-        // Avoid animations on load.
-        this._subscriptAnimationState = 'enter';
-        this._changeDetectorRef.detectChanges();
-    };
-    /**
-     * Determines whether a class from the NgControl should be forwarded to the host element.
-     * @param {?} prop
-     * @return {?}
-     */
-    MdInputContainer.prototype._shouldForward = function (prop) {
-        var /** @type {?} */ control = this._mdInputChild ? this._mdInputChild._ngControl : null;
-        return control && ((control))[prop];
-    };
-    /**
-     * Whether the input has a placeholder.
-     * @return {?}
-     */
-    MdInputContainer.prototype._hasPlaceholder = function () { return !!(this._mdInputChild.placeholder || this._placeholderChild); };
-    /**
-     * Focuses the underlying input.
-     * @return {?}
-     */
-    MdInputContainer.prototype._focusInput = function () { this._mdInputChild.focus(); };
-    /**
-     * Whether the input container is in an error state.
-     * @return {?}
-     */
-    MdInputContainer.prototype._isErrorState = function () {
-        var /** @type {?} */ control = this._mdInputChild._ngControl;
-        var /** @type {?} */ isInvalid = control && control.invalid;
-        var /** @type {?} */ isTouched = control && control.touched;
-        var /** @type {?} */ isSubmitted = (this._parentFormGroup && this._parentFormGroup.submitted) ||
-            (this._parentForm && this._parentForm.submitted);
-        return !!(isInvalid && (isTouched || isSubmitted));
-    };
-    /**
-     * Determines whether to display hints or errors.
-     * @return {?}
-     */
-    MdInputContainer.prototype._getDisplayedMessages = function () {
-        return (this._errorChildren.length > 0 && this._isErrorState()) ? 'error' : 'hint';
-    };
-    /**
-     * Ensure that there is only one placeholder (either `input` attribute or child element with the
-     * `md-placeholder` attribute.
-     * @return {?}
-     */
-    MdInputContainer.prototype._validatePlaceholders = function () {
-        if (this._mdInputChild.placeholder && this._placeholderChild) {
-            throw getMdInputContainerPlaceholderConflictError();
-        }
-    };
-    /**
-     * Does any extra processing that is required when handling the hints.
-     * @return {?}
-     */
-    MdInputContainer.prototype._processHints = function () {
-        this._validateHints();
-        this._syncAriaDescribedby();
-    };
-    /**
-     * Ensure that there is a maximum of one of each `<md-hint>` alignment specified, with the
-     * attribute being considered as `align="start"`.
-     * @return {?}
-     */
-    MdInputContainer.prototype._validateHints = function () {
-        var _this = this;
-        if (this._hintChildren) {
-            var /** @type {?} */ startHint_1 = null;
-            var /** @type {?} */ endHint_1 = null;
-            this._hintChildren.forEach(function (hint) {
-                if (hint.align == 'start') {
-                    if (startHint_1 || _this.hintLabel) {
-                        throw getMdInputContainerDuplicatedHintError('start');
-                    }
-                    startHint_1 = hint;
-                }
-                else if (hint.align == 'end') {
-                    if (endHint_1) {
-                        throw getMdInputContainerDuplicatedHintError('end');
-                    }
-                    endHint_1 = hint;
-                }
-            });
-        }
-    };
-    /**
-     * Sets the child input's `aria-describedby` to a space-separated list of the ids
-     * of the currently-specified hints, as well as a generated id for the hint label.
-     * @return {?}
-     */
-    MdInputContainer.prototype._syncAriaDescribedby = function () {
-        if (this._mdInputChild) {
-            var /** @type {?} */ ids = [];
-            var /** @type {?} */ startHint = this._hintChildren ?
-                this._hintChildren.find(function (hint) { return hint.align === 'start'; }) : null;
-            var /** @type {?} */ endHint = this._hintChildren ?
-                this._hintChildren.find(function (hint) { return hint.align === 'end'; }) : null;
-            if (startHint) {
-                ids.push(startHint.id);
-            }
-            else if (this._hintLabel) {
-                ids.push(this._hintLabelId);
-            }
-            if (endHint) {
-                ids.push(endHint.id);
-            }
-            this._mdInputChild.ariaDescribedby = ids.join(' ');
-        }
-    };
-    /**
-     * Throws an error if the container's input child was removed.
-     * @return {?}
-     */
-    MdInputContainer.prototype._validateInputChild = function () {
-        if (!this._mdInputChild) {
-            throw getMdInputContainerMissingMdInputError();
-        }
-    };
-    return MdInputContainer;
-}());
-MdInputContainer.decorators = [
-    { type: Component, args: [{ selector: 'md-input-container, mat-input-container',
-                template: "<div class=\"mat-input-wrapper\"> <div class=\"mat-input-table\"> <div class=\"mat-input-prefix\" *ngIf=\"_prefixChildren.length\"> <!-- TODO(andrewseguin): remove [md-prefix] --> <ng-content select=\"[mdPrefix], [matPrefix], [md-prefix]\"></ng-content> </div> <div class=\"mat-input-infix\" [class.mat-end]=\"align == 'end'\"> <ng-content selector=\"input, textarea\"></ng-content> <span class=\"mat-input-placeholder-wrapper\"> <label class=\"mat-input-placeholder\" [attr.for]=\"_mdInputChild.id\" [class.mat-empty]=\"_mdInputChild.empty && !_shouldAlwaysFloat\" [class.mat-float]=\"_canPlaceholderFloat\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\" *ngIf=\"_hasPlaceholder()\"> <ng-content select=\"md-placeholder, mat-placeholder\"></ng-content> {{_mdInputChild.placeholder}} <span class=\"mat-placeholder-required\" *ngIf=\"!hideRequiredMarker && _mdInputChild.required\">*</span> </label> </span> </div> <div class=\"mat-input-suffix\" *ngIf=\"_suffixChildren.length\"> <!-- TODO(andrewseguin): remove [md-suffix] --> <ng-content select=\"[mdSuffix], [matSuffix], [md-suffix]\"></ng-content> </div> </div> <div class=\"mat-input-underline\" #underline [class.mat-disabled]=\"_mdInputChild.disabled\"> <span class=\"mat-input-ripple\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\"></span> </div> <div class=\"mat-input-subscript-wrapper\" [ngSwitch]=\"_getDisplayedMessages()\"> <div *ngSwitchCase=\"'error'\" [@transitionMessages]=\"_subscriptAnimationState\"> <ng-content select=\"md-error, mat-error\"></ng-content> </div> <div class=\"mat-input-hint-wrapper\" *ngSwitchCase=\"'hint'\" [@transitionMessages]=\"_subscriptAnimationState\"> <div *ngIf=\"hintLabel\" [id]=\"_hintLabelId\" class=\"mat-hint\">{{hintLabel}}</div> <ng-content select=\"md-hint:not([align='end']), mat-hint:not([align='end'])\"></ng-content> <div class=\"mat-input-hint-spacer\"></div> <ng-content select=\"md-hint[align='end'], mat-hint[align='end']\"></ng-content> </div> </div> </div> ",
-                styles: [".mat-input-container{display:inline-block;position:relative;font-family:Roboto,\"Helvetica Neue\",sans-serif;line-height:normal;text-align:left}[dir=rtl] .mat-input-container{text-align:right}.mat-input-container .mat-datepicker-toggle,.mat-input-container .mat-icon{width:1em;height:1em;font-size:100%;vertical-align:top}.mat-input-wrapper{margin:1em 0;padding-bottom:6px}.mat-input-table{display:inline-table;flex-flow:column;vertical-align:bottom;width:100%}.mat-input-table>*{display:table-cell}.mat-input-infix{position:relative}.mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;width:100%;vertical-align:bottom}.mat-end .mat-input-element{text-align:right}[dir=rtl] .mat-end .mat-input-element{text-align:left}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element:-webkit-autofill+.mat-input-placeholder-wrapper .mat-float{display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%;transition:none}.mat-input-element::placeholder{color:transparent!important}.mat-input-element::-moz-placeholder{color:transparent!important}.mat-input-element::-webkit-input-placeholder{color:transparent!important}.mat-input-element:-ms-input-placeholder{color:transparent!important}.mat-input-placeholder{position:absolute;left:0;top:0;font-size:100%;pointer-events:none;z-index:1;padding-top:1em;width:100%;display:none;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:translate3d(0,0,0);transform-origin:bottom left;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1)}.mat-input-placeholder.mat-empty{display:block;cursor:text}.mat-focused .mat-input-placeholder.mat-float,.mat-input-placeholder.mat-float:not(.mat-empty){display:block;transform:translate3d(0,-1.35em,0) scale(.75);width:133.33333%}[dir=rtl] .mat-input-placeholder{transform-origin:bottom right;left:auto;right:0}.mat-input-placeholder:not(.mat-empty){transition:none}.mat-input-placeholder-wrapper{position:absolute;left:0;top:-1em;width:100%;padding-top:1em;overflow:hidden;pointer-events:none;transform:translate3d(0,0,0)}.mat-input-placeholder-wrapper::after{content:'';display:inline-table}.mat-input-underline{position:absolute;height:1px;width:100%;margin-top:4px;border-top-width:1px;border-top-style:solid}.mat-input-underline.mat-disabled{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;border-top:0;background-position:0}.mat-input-underline .mat-input-ripple{position:absolute;height:2px;z-index:1;top:-1px;width:100%;transform-origin:50%;transform:scaleX(.5);visibility:hidden;transition:background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-focused .mat-input-underline .mat-input-ripple,.mat-input-invalid .mat-input-underline .mat-input-ripple{visibility:visible;transform:scaleX(1);transition:transform 150ms linear,background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-input-subscript-wrapper{position:absolute;font-size:75%;top:100%;width:100%;margin-top:-1.2em;line-height:1.2em;overflow:hidden}.mat-input-hint-wrapper{display:flex}.mat-input-hint-spacer{flex:1 0 10px}.mat-input-error{display:block}.mat-input-prefix,.mat-input-suffix{width:.1px;white-space:nowrap} /*# sourceMappingURL=input-container.css.map */ "],
-                animations: [
-                    trigger('transitionMessages', [
-                        state('enter', style({ opacity: 1, transform: 'translateY(0%)' })),
-                        transition('void => enter', [
-                            style({ opacity: 0, transform: 'translateY(-100%)' }),
-                            animate('300ms cubic-bezier(0.55, 0, 0.55, 0.2)')
-                        ])
-                    ])
-                ],
-                host: {
-                    // Remove align attribute to prevent it from interfering with layout.
-                    '[attr.align]': 'null',
-                    '[class.mat-input-container]': 'true',
-                    '[class.mat-input-invalid]': '_isErrorState()',
-                    '[class.mat-focused]': '_mdInputChild.focused',
-                    '[class.ng-untouched]': '_shouldForward("untouched")',
-                    '[class.ng-touched]': '_shouldForward("touched")',
-                    '[class.ng-pristine]': '_shouldForward("pristine")',
-                    '[class.ng-dirty]': '_shouldForward("dirty")',
-                    '[class.ng-valid]': '_shouldForward("valid")',
-                    '[class.ng-invalid]': '_shouldForward("invalid")',
-                    '[class.ng-pending]': '_shouldForward("pending")',
-                    '(click)': '_focusInput()',
-                },
-                encapsulation: ViewEncapsulation.None,
-            },] },
-];
-/**
- * @nocollapse
- */
-MdInputContainer.ctorParameters = function () { return [
-    { type: ElementRef, },
-    { type: ChangeDetectorRef, },
-    { type: NgForm, decorators: [{ type: Optional },] },
-    { type: FormGroupDirective, decorators: [{ type: Optional },] },
-]; };
-MdInputContainer.propDecorators = {
-    'align': [{ type: Input },],
-    'color': [{ type: Input },],
-    'dividerColor': [{ type: Input },],
-    'hideRequiredMarker': [{ type: Input },],
-    'hintLabel': [{ type: Input },],
-    'floatPlaceholder': [{ type: Input },],
-    'underlineRef': [{ type: ViewChild, args: ['underline',] },],
-    '_mdInputChild': [{ type: ContentChild, args: [MdInputDirective,] },],
-    '_placeholderChild': [{ type: ContentChild, args: [MdPlaceholder,] },],
-    '_errorChildren': [{ type: ContentChildren, args: [MdErrorDirective,] },],
-    '_hintChildren': [{ type: ContentChildren, args: [MdHint,] },],
-    '_prefixChildren': [{ type: ContentChildren, args: [MdPrefix,] },],
-    '_suffixChildren': [{ type: ContentChildren, args: [MdSuffix,] },],
-};
+// import {MdInputContainer} from '../input/input-container';
 /**
  * The height of each autocomplete option.
  */
@@ -6927,10 +5740,9 @@ var MdAutocompleteTrigger = /*@__PURE__*/(function () {
      * @param {?} _scrollDispatcher
      * @param {?} _dir
      * @param {?} _zone
-     * @param {?} _inputContainer
      * @param {?} _document
      */
-    function MdAutocompleteTrigger(_element, _overlay, _viewContainerRef, _changeDetectorRef, _scrollDispatcher, _dir, _zone, _inputContainer, _document) {
+    function MdAutocompleteTrigger(_element, _overlay, _viewContainerRef, _changeDetectorRef, _scrollDispatcher, _dir, _zone, _document) {
         this._element = _element;
         this._overlay = _overlay;
         this._viewContainerRef = _viewContainerRef;
@@ -6938,7 +5750,6 @@ var MdAutocompleteTrigger = /*@__PURE__*/(function () {
         this._scrollDispatcher = _scrollDispatcher;
         this._dir = _dir;
         this._zone = _zone;
-        this._inputContainer = _inputContainer;
         this._document = _document;
         this._panelOpen = false;
         /**
@@ -7173,7 +5984,7 @@ var MdAutocompleteTrigger = /*@__PURE__*/(function () {
      * @return {?}
      */
     MdAutocompleteTrigger.prototype._resetPlaceholder = function () {
-        if (this._manuallyFloatingPlaceholder) {
+        if (this._manuallyFloatingPlaceholder && this._inputContainer) {
             this._inputContainer.floatPlaceholder = 'auto';
             this._manuallyFloatingPlaceholder = false;
         }
@@ -7347,7 +6158,6 @@ MdAutocompleteTrigger.ctorParameters = function () { return [
     { type: ScrollDispatcher, },
     { type: Dir, decorators: [{ type: Optional },] },
     { type: NgZone, },
-    { type: MdInputContainer, decorators: [{ type: Optional }, { type: Host },] },
     { type: undefined, decorators: [{ type: Optional }, { type: Inject, args: [DOCUMENT,] },] },
 ]; };
 MdAutocompleteTrigger.propDecorators = {
@@ -7370,220 +6180,6 @@ MdAutocompleteModule.decorators = [
  * @nocollapse
  */
 MdAutocompleteModule.ctorParameters = function () { return []; };
-/**
- * Directive to automatically resize a textarea to fit its content.
- */
-var MdTextareaAutosize = /*@__PURE__*/(function () {
-    /**
-     * @param {?} _elementRef
-     */
-    function MdTextareaAutosize(_elementRef) {
-        this._elementRef = _elementRef;
-    }
-    Object.defineProperty(MdTextareaAutosize.prototype, "minRows", {
-        /**
-         * @deprecated Use mdAutosizeMinRows
-         * @return {?}
-         */
-        get: function () { return this._minRows; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._minRows = value;
-            this._setMinHeight();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdTextareaAutosize.prototype, "maxRows", {
-        /**
-         * @deprecated Use mdAutosizeMaxRows
-         * @return {?}
-         */
-        get: function () { return this._maxRows; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) {
-            this._maxRows = value;
-            this._setMaxHeight();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdTextareaAutosize.prototype, "mdAutosizeMinRows", {
-        /**
-         * Minimum number of rows for this textarea.
-         * @return {?}
-         */
-        get: function () { return this.minRows; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this.minRows = value; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(MdTextareaAutosize.prototype, "mdAutosizeMaxRows", {
-        /**
-         * Maximum number of rows for this textarea.
-         * @return {?}
-         */
-        get: function () { return this.maxRows; },
-        /**
-         * @param {?} value
-         * @return {?}
-         */
-        set: function (value) { this.maxRows = value; },
-        enumerable: true,
-        configurable: true
-    });
-    /**
-     * Sets the minimum height of the textarea as determined by minRows.
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype._setMinHeight = function () {
-        var /** @type {?} */ minHeight = this.minRows && this._cachedLineHeight ?
-            this.minRows * this._cachedLineHeight + "px" : null;
-        if (minHeight) {
-            this._setTextareaStyle('minHeight', minHeight);
-        }
-    };
-    /**
-     * Sets the maximum height of the textarea as determined by maxRows.
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype._setMaxHeight = function () {
-        var /** @type {?} */ maxHeight = this.maxRows && this._cachedLineHeight ?
-            this.maxRows * this._cachedLineHeight + "px" : null;
-        if (maxHeight) {
-            this._setTextareaStyle('maxHeight', maxHeight);
-        }
-    };
-    /**
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype.ngAfterViewInit = function () {
-        this._cacheTextareaLineHeight();
-        this.resizeToFitContent();
-    };
-    /**
-     * Sets a style property on the textarea element.
-     * @param {?} property
-     * @param {?} value
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype._setTextareaStyle = function (property, value) {
-        var /** @type {?} */ textarea = (this._elementRef.nativeElement);
-        textarea.style[property] = value;
-    };
-    /**
-     * Cache the height of a single-row textarea.
-     *
-     * We need to know how large a single "row" of a textarea is in order to apply minRows and
-     * maxRows. For the initial version, we will assume that the height of a single line in the
-     * textarea does not ever change.
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype._cacheTextareaLineHeight = function () {
-        var /** @type {?} */ textarea = (this._elementRef.nativeElement);
-        // Use a clone element because we have to override some styles.
-        var /** @type {?} */ textareaClone = (textarea.cloneNode(false));
-        textareaClone.rows = 1;
-        // Use `position: absolute` so that this doesn't cause a browser layout and use
-        // `visibility: hidden` so that nothing is rendered. Clear any other styles that
-        // would affect the height.
-        textareaClone.style.position = 'absolute';
-        textareaClone.style.visibility = 'hidden';
-        textareaClone.style.border = 'none';
-        textareaClone.style.padding = '0';
-        textareaClone.style.height = '';
-        textareaClone.style.minHeight = '';
-        textareaClone.style.maxHeight = '';
-        textarea.parentNode.appendChild(textareaClone);
-        this._cachedLineHeight = textareaClone.clientHeight;
-        textarea.parentNode.removeChild(textareaClone);
-        // Min and max heights have to be re-calculated if the cached line height changes
-        this._setMinHeight();
-        this._setMaxHeight();
-    };
-    /**
-     * Resize the textarea to fit its content.
-     * @return {?}
-     */
-    MdTextareaAutosize.prototype.resizeToFitContent = function () {
-        var /** @type {?} */ textarea = (this._elementRef.nativeElement);
-        // Reset the textarea height to auto in order to shrink back to its default size.
-        textarea.style.height = 'auto';
-        // Use the scrollHeight to know how large the textarea *would* be if fit its entire value.
-        textarea.style.height = textarea.scrollHeight + "px";
-    };
-    return MdTextareaAutosize;
-}());
-MdTextareaAutosize.decorators = [
-    { type: Directive, args: [{
-                selector: 'textarea[md-autosize], textarea[mdTextareaAutosize],' +
-                    'textarea[mat-autosize], textarea[matTextareaAutosize]',
-                exportAs: 'mdTextareaAutosize',
-                host: {
-                    '(input)': 'resizeToFitContent()',
-                },
-            },] },
-];
-/**
- * @nocollapse
- */
-MdTextareaAutosize.ctorParameters = function () { return [
-    { type: ElementRef, },
-]; };
-MdTextareaAutosize.propDecorators = {
-    'minRows': [{ type: Input },],
-    'maxRows': [{ type: Input },],
-    'mdAutosizeMinRows': [{ type: Input },],
-    'mdAutosizeMaxRows': [{ type: Input },],
-};
-var MdInputModule = /*@__PURE__*/(function () {
-    function MdInputModule() {
-    }
-    return MdInputModule;
-}());
-MdInputModule.decorators = [
-    { type: NgModule, args: [{
-                declarations: [
-                    MdErrorDirective,
-                    MdHint,
-                    MdInputContainer,
-                    MdInputDirective,
-                    MdPlaceholder,
-                    MdPrefix,
-                    MdSuffix,
-                    MdTextareaAutosize,
-                ],
-                imports: [
-                    CommonModule,
-                    FormsModule,
-                    PlatformModule,
-                ],
-                exports: [
-                    MdErrorDirective,
-                    MdHint,
-                    MdInputContainer,
-                    MdInputDirective,
-                    MdPlaceholder,
-                    MdPrefix,
-                    MdSuffix,
-                    MdTextareaAutosize,
-                ],
-            },] },
-];
-/**
- * @nocollapse
- */
-MdInputModule.ctorParameters = function () { return []; };
 /**
  * Mixin to augment a directive with a `disabled` property.
  * @template T
@@ -8414,6 +7010,7 @@ MdSlider.decorators = [
                     '[attr.aria-valuemax]': 'max',
                     '[attr.aria-valuemin]': 'min',
                     '[attr.aria-valuenow]': 'value',
+                    '[attr.aria-orientation]': 'vertical ? "vertical" : "horizontal"',
                     '[class.mat-primary]': 'color == "primary"',
                     '[class.mat-accent]': 'color != "primary" && color != "warn"',
                     '[class.mat-warn]': 'color == "warn"',
@@ -9122,5 +7719,5 @@ MdTooltipModule.ctorParameters = function () { return []; };
 /**
  * Generated bundle index. Do not edit.
  */
-export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdInputModule, MdTextareaAutosize, MdPlaceholder, MdHint, MdErrorDirective, MdPrefix, MdSuffix, MdInputDirective, MdInputContainer, getMdInputContainerPlaceholderConflictError, getMdInputContainerUnsupportedTypeError, getMdInputContainerDuplicatedHintError, getMdInputContainerMissingMdInputError, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, throwMdTooltipInvalidPositionError, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵi, mixinDisabled as ɵl, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵj, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵk, VIEWPORT_RULER_PROVIDER as ɵe, VIEWPORT_RULER_PROVIDER_FACTORY as ɵd, SCROLL_DISPATCHER_PROVIDER as ɵg, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵf, RippleRenderer as ɵh };
+export { Dir, RtlModule, ObserveContentModule, ObserveContent, MdOptionModule, MdOption, MdOptionSelectionChange, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, coerceBooleanProperty, coerceNumberProperty, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MdCoreModule, PlatformModule, Platform, getSupportedInputTypes, Overlay, OVERLAY_PROVIDERS, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, OverlayModule, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, MATERIAL_COMPATIBILITY_MODE, MATERIAL_SANITY_CHECKS, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_VALUE_ACCESSOR, MdAutocompleteTrigger, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, SliderRenderer, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, throwMdTooltipInvalidPositionError, MdTooltip, TooltipComponent, LIVE_ANNOUNCER_PROVIDER_FACTORY as ɵi, mixinDisabled as ɵl, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵj, MdMutationObserverFactory as ɵa, OVERLAY_CONTAINER_PROVIDER as ɵc, OVERLAY_CONTAINER_PROVIDER_FACTORY as ɵb, OverlayPositionBuilder as ɵk, VIEWPORT_RULER_PROVIDER as ɵe, VIEWPORT_RULER_PROVIDER_FACTORY as ɵd, SCROLL_DISPATCHER_PROVIDER as ɵg, SCROLL_DISPATCHER_PROVIDER_FACTORY as ɵf, RippleRenderer as ɵh };
 //# sourceMappingURL=material.es5.js.map
