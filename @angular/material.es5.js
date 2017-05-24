@@ -1,15 +1,6 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+import * as tslib_1 from "tslib";
 /**
-  * @license Angular Material v2.0.0-beta.5
+  * @license Angular Material v2.0.0-beta.6
   * Copyright (c) 2017 Google, Inc. https://material.angular.io/
   * License: MIT
   */
@@ -1982,8 +1973,8 @@ var Portal = /*@__PURE__*/(function () {
 /**
  * A `ComponentPortal` is a portal that instantiates some Component upon attachment.
  */
-var ComponentPortal = /*@__PURE__*/(function (_super) {
-    __extends(ComponentPortal, _super);
+var ComponentPortal = (function (_super) {
+    tslib_1.__extends(ComponentPortal, _super);
     /**
      * @param {?} component
      * @param {?=} viewContainerRef
@@ -2003,8 +1994,8 @@ var ComponentPortal = /*@__PURE__*/(function (_super) {
 /**
  * A `TemplatePortal` is a portal that represents some embedded template (TemplateRef).
  */
-var TemplatePortal = /*@__PURE__*/(function (_super) {
-    __extends(TemplatePortal, _super);
+var TemplatePortal = (function (_super) {
+    tslib_1.__extends(TemplatePortal, _super);
     /**
      * @param {?} template
      * @param {?} viewContainerRef
@@ -2153,8 +2144,8 @@ var BasePortalHost = /*@__PURE__*/(function () {
  *   <p> Hello {{name}} </p>
  * </ng-template>
  */
-var TemplatePortalDirective = /*@__PURE__*/(function (_super) {
-    __extends(TemplatePortalDirective, _super);
+var TemplatePortalDirective = (function (_super) {
+    tslib_1.__extends(TemplatePortalDirective, _super);
     /**
      * @param {?} templateRef
      * @param {?} viewContainerRef
@@ -2184,8 +2175,8 @@ TemplatePortalDirective.ctorParameters = function () { return [
  * Usage:
  * <ng-template [cdkPortalHost]="greeting"></ng-template>
  */
-var PortalHostDirective = /*@__PURE__*/(function (_super) {
-    __extends(PortalHostDirective, _super);
+var PortalHostDirective = (function (_super) {
+    tslib_1.__extends(PortalHostDirective, _super);
     /**
      * @param {?} _componentFactoryResolver
      * @param {?} _viewContainerRef
@@ -2343,8 +2334,8 @@ var OverlayState = /*@__PURE__*/(function () {
  *
  * This is the only part of the portal core that directly touches the DOM.
  */
-var DomPortalHost = /*@__PURE__*/(function (_super) {
-    __extends(DomPortalHost, _super);
+var DomPortalHost = (function (_super) {
+    tslib_1.__extends(DomPortalHost, _super);
     /**
      * @param {?} _hostDomElement
      * @param {?} _componentFactoryResolver
@@ -4579,8 +4570,8 @@ A11yModule.ctorParameters = function () { return []; };
  *   {provide: OverlayContainer, useClass: FullscreenOverlayContainer}
  * ],
  */
-var FullscreenOverlayContainer = /*@__PURE__*/(function (_super) {
-    __extends(FullscreenOverlayContainer, _super);
+var FullscreenOverlayContainer = (function (_super) {
+    tslib_1.__extends(FullscreenOverlayContainer, _super);
     function FullscreenOverlayContainer() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
@@ -4643,8 +4634,8 @@ FullscreenOverlayContainer.decorators = [
  * @nocollapse
  */
 FullscreenOverlayContainer.ctorParameters = function () { return []; };
-var GestureConfig = /*@__PURE__*/(function (_super) {
-    __extends(GestureConfig, _super);
+var GestureConfig = (function (_super) {
+    tslib_1.__extends(GestureConfig, _super);
     function GestureConfig() {
         var _this = _super.call(this) || this;
         _this._hammer = typeof window !== 'undefined' ? ((window)).Hammer : null;
@@ -5593,8 +5584,8 @@ var ListKeyManager = /*@__PURE__*/(function () {
     };
     return ListKeyManager;
 }());
-var ActiveDescendantKeyManager = /*@__PURE__*/(function (_super) {
-    __extends(ActiveDescendantKeyManager, _super);
+var ActiveDescendantKeyManager = (function (_super) {
+    tslib_1.__extends(ActiveDescendantKeyManager, _super);
     function ActiveDescendantKeyManager() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
@@ -6176,8 +6167,8 @@ MdAutocompleteModule.decorators = [
  * @nocollapse
  */
 MdAutocompleteModule.ctorParameters = function () { return []; };
-var FocusKeyManager = /*@__PURE__*/(function (_super) {
-    __extends(FocusKeyManager, _super);
+var FocusKeyManager = (function (_super) {
+    tslib_1.__extends(FocusKeyManager, _super);
     /**
      * @param {?} items
      */
@@ -7410,7 +7401,7 @@ MdSelectModule.ctorParameters = function () { return []; };
  */
 function mixinDisabled(base) {
     return (function (_super) {
-        __extends(class_1, _super);
+        tslib_1.__extends(class_1, _super);
         /**
          * @param {...?} args
          */
@@ -7483,8 +7474,8 @@ var _MdSliderMixinBase = mixinDisabled(MdSliderBase);
  * Allows users to select from a range of values by moving the slider thumb. It is similar in
  * behavior to the native `<input type="range">` element.
  */
-var MdSlider = /*@__PURE__*/(function (_super) {
-    __extends(MdSlider, _super);
+var MdSlider = (function (_super) {
+    tslib_1.__extends(MdSlider, _super);
     /**
      * @param {?} renderer
      * @param {?} _elementRef
