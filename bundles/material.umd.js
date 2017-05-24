@@ -4,9 +4,9 @@
   * License: MIT
   */
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/platform-browser'), require('rxjs/Subject'), require('rxjs/add/operator/debounceTime'), require('@angular/common'), require('rxjs/Observable'), require('rxjs/Subscription'), require('rxjs/add/observable/fromEvent'), require('rxjs/add/observable/merge'), require('rxjs/add/operator/auditTime'), require('rxjs/add/operator/first'), require('rxjs/add/observable/of'), require('@angular/forms'), require('rxjs/add/operator/filter'), require('rxjs/add/operator/switchMap'), require('@angular/animations')) :
-	typeof define === 'function' && define.amd ? define(['exports', '@angular/core', '@angular/platform-browser', 'rxjs/Subject', 'rxjs/add/operator/debounceTime', '@angular/common', 'rxjs/Observable', 'rxjs/Subscription', 'rxjs/add/observable/fromEvent', 'rxjs/add/observable/merge', 'rxjs/add/operator/auditTime', 'rxjs/add/operator/first', 'rxjs/add/observable/of', '@angular/forms', 'rxjs/add/operator/filter', 'rxjs/add/operator/switchMap', '@angular/animations'], factory) :
-	(factory((global.ng = global.ng || {}, global.ng.material = global.ng.material || {}, global.ng.material.material = global.ng.material.material || {}),global.ng.core,global.ng.platformBrowser,global.Rx,global.Rx.Observable.prototype,global.ng.common,global.Rx,global.Rx,global.Rx.Observable,global.Rx.Observable,global.Rx.Observable.prototype,global.Rx.Observable.prototype,global.Rx.Observable,global.ng.forms,global.Rx.Observable.prototype,global.Rx.Observable.prototype,global.ng.animations));
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/platform-browser'), require('rxjs/Subject'), require('rxjs/add/operator/debounceTime'), require('@angular/common'), require('rxjs/Observable'), require('rxjs/Subscription'), require('rxjs/add/observable/fromEvent'), require('rxjs/add/observable/merge'), require('rxjs/add/operator/auditTime'), require('rxjs/add/operator/first'), require('rxjs/add/observable/of'), require('@angular/forms'), require('rxjs/add/operator/filter'), require('rxjs/add/operator/switchMap'), require('@angular/animations'), require('rxjs/add/operator/startWith')) :
+	typeof define === 'function' && define.amd ? define(['exports', '@angular/core', '@angular/platform-browser', 'rxjs/Subject', 'rxjs/add/operator/debounceTime', '@angular/common', 'rxjs/Observable', 'rxjs/Subscription', 'rxjs/add/observable/fromEvent', 'rxjs/add/observable/merge', 'rxjs/add/operator/auditTime', 'rxjs/add/operator/first', 'rxjs/add/observable/of', '@angular/forms', 'rxjs/add/operator/filter', 'rxjs/add/operator/switchMap', '@angular/animations', 'rxjs/add/operator/startWith'], factory) :
+	(factory((global.ng = global.ng || {}, global.ng.material = global.ng.material || {}),global.ng.core,global.ng.platformBrowser,global.Rx,global.Rx.Observable.prototype,global.ng.common,global.Rx,global.Rx,global.Rx.Observable,global.Rx.Observable,global.Rx.Observable.prototype,global.Rx.Observable.prototype,global.Rx.Observable,global.ng.forms,global.Rx.Observable.prototype,global.Rx.Observable.prototype,global.ng.animations));
 }(this, (function (exports,_angular_core,_angular_platformBrowser,rxjs_Subject,rxjs_add_operator_debounceTime,_angular_common,rxjs_Observable,rxjs_Subscription,rxjs_add_observable_fromEvent,rxjs_add_observable_merge,rxjs_add_operator_auditTime,rxjs_add_operator_first,rxjs_add_observable_of,_angular_forms,rxjs_add_operator_filter,rxjs_add_operator_switchMap,_angular_animations) { 'use strict';
 
 var __extends = (this && this.__extends) || (function () {
@@ -5439,12 +5439,6 @@ var ListKeyManager = (function () {
             case UP_ARROW:
                 this.setPreviousItemActive();
                 break;
-            case HOME:
-                this.setFirstItemActive();
-                break;
-            case END:
-                this.setLastItemActive();
-                break;
             case TAB:
                 // Note that we shouldn't prevent the default action on tab.
                 this._tabOut.next(null);
@@ -6043,6 +6037,7 @@ var MdAutocompleteTrigger = (function () {
             this._clearPreviousSelectedOption(event.source);
             this._setTriggerValue(event.source.value);
             this._onChange(event.source.value);
+            this._element.nativeElement.focus();
         }
         this.closePanel();
     };
@@ -6175,6 +6170,1232 @@ MdAutocompleteModule.decorators = [
  * @nocollapse
  */
 MdAutocompleteModule.ctorParameters = function () { return []; };
+var FocusKeyManager = (function (_super) {
+    __extends(FocusKeyManager, _super);
+    /**
+     * @param {?} items
+     */
+    function FocusKeyManager(items) {
+        return _super.call(this, items) || this;
+    }
+    /**
+     * This method sets the active item to the item at the specified index.
+     * It also adds focuses the newly active item.
+     * @param {?} index
+     * @return {?}
+     */
+    FocusKeyManager.prototype.setActiveItem = function (index) {
+        _super.prototype.setActiveItem.call(this, index);
+        if (this.activeItem) {
+            this.activeItem.focus();
+        }
+    };
+    return FocusKeyManager;
+}(ListKeyManager));
+/**
+ * This animation shrinks the placeholder text to 75% of its normal size and translates
+ * it to either the top left corner (ltr) or top right corner (rtl) of the trigger,
+ * depending on the text direction of the application.
+ */
+var transformPlaceholder = _angular_animations.trigger('transformPlaceholder', [
+    _angular_animations.state('floating-ltr', _angular_animations.style({
+        top: '-22px',
+        left: '-2px',
+        transform: "scale(0.75)"
+    })),
+    _angular_animations.state('floating-rtl', _angular_animations.style({
+        top: '-22px',
+        left: '2px',
+        transform: "scale(0.75)"
+    })),
+    _angular_animations.transition('* => *', _angular_animations.animate("400ms cubic-bezier(0.25, 0.8, 0.25, 1)"))
+]);
+/**
+ * This animation transforms the select's overlay panel on and off the page.
+ *
+ * When the panel is attached to the DOM, it expands its width 32px, scales it up to
+ * 100% on the Y axis, fades in its border, and translates slightly up and to the
+ * side to ensure the option text correctly overlaps the trigger text.
+ *
+ * When the panel is removed from the DOM, it simply fades out linearly.
+ */
+var transformPanel = _angular_animations.trigger('transformPanel', [
+    _angular_animations.state('showing', _angular_animations.style({
+        opacity: 1,
+        minWidth: 'calc(100% + 32px)',
+        transform: "scaleY(1)"
+    })),
+    _angular_animations.transition('void => *', [
+        _angular_animations.style({
+            opacity: 0,
+            minWidth: '100%',
+            transform: "scaleY(0)"
+        }),
+        _angular_animations.animate("150ms cubic-bezier(0.25, 0.8, 0.25, 1)")
+    ]),
+    _angular_animations.transition('* => void', [
+        _angular_animations.animate('250ms 100ms linear', _angular_animations.style({ opacity: 0 }))
+    ])
+]);
+/**
+ * This animation fades in the background color and text content of the
+ * select's options. It is time delayed to occur 100ms after the overlay
+ * panel has transformed in.
+ */
+var fadeInContent = _angular_animations.trigger('fadeInContent', [
+    _angular_animations.state('showing', _angular_animations.style({ opacity: 1 })),
+    _angular_animations.transition('void => showing', [
+        _angular_animations.style({ opacity: 0 }),
+        _angular_animations.animate("150ms 100ms cubic-bezier(0.55, 0, 0.55, 0.2)")
+    ])
+]);
+/**
+ * Returns an exception to be thrown when attempting to change a s
+ * elect's `multiple` option after initialization.
+ * \@docs-private
+ * @return {?}
+ */
+function getMdSelectDynamicMultipleError() {
+    return new Error('Cannot change `multiple` mode of select after initialization.');
+}
+/**
+ * Returns an exception to be thrown when attempting to assign a non-array value to a select
+ * in `multiple` mode. Note that `undefined` and `null` are still valid values to allow for
+ * resetting the value.
+ * \@docs-private
+ * @return {?}
+ */
+function getMdSelectNonArrayValueError() {
+    return new Error('Cannot assign truthy non-array value to select in `multiple` mode.');
+}
+/**
+ * The fixed height of every option element.
+ */
+var SELECT_OPTION_HEIGHT = 48;
+/**
+ * The max height of the select's overlay panel
+ */
+var SELECT_PANEL_MAX_HEIGHT = 256;
+/**
+ * The max number of options visible at once in the select panel.
+ */
+var SELECT_MAX_OPTIONS_DISPLAYED = 5;
+/**
+ * The fixed height of the select's trigger element.
+ */
+var SELECT_TRIGGER_HEIGHT = 30;
+/**
+ * Must adjust for the difference in height between the option and the trigger,
+ * so the text will align on the y axis.
+ * (SELECT_OPTION_HEIGHT (48) - SELECT_TRIGGER_HEIGHT (30)) / 2 = 9
+ */
+var SELECT_OPTION_HEIGHT_ADJUSTMENT = 9;
+/**
+ * The panel's padding on the x-axis
+ */
+var SELECT_PANEL_PADDING_X = 16;
+/**
+ * Distance between the panel edge and the option text in
+ * multi-selection mode.
+ *
+ * (SELECT_PADDING * 1.75) + 20 = 48
+ * The padding is multiplied by 1.75 because the checkbox's margin is half the padding, and
+ * the browser adds ~4px, because we're using inline elements.
+ * The checkbox width is 20px.
+ */
+var SELECT_MULTIPLE_PANEL_PADDING_X = SELECT_PANEL_PADDING_X * 1.75 + 20;
+/**
+ * The panel's padding on the y-axis. This padding indicates there are more
+ * options available if you scroll.
+ */
+var SELECT_PANEL_PADDING_Y = 16;
+/**
+ * The select panel will only "fit" inside the viewport if it is positioned at
+ * this value or more away from the viewport boundary.
+ */
+var SELECT_PANEL_VIEWPORT_PADDING = 8;
+/**
+ * Change event object that is emitted when the select value has changed.
+ */
+var MdSelectChange = (function () {
+    /**
+     * @param {?} source
+     * @param {?} value
+     */
+    function MdSelectChange(source, value) {
+        this.source = source;
+        this.value = value;
+    }
+    return MdSelectChange;
+}());
+var MdSelect = (function () {
+    /**
+     * @param {?} _element
+     * @param {?} _renderer
+     * @param {?} _viewportRuler
+     * @param {?} _changeDetectorRef
+     * @param {?} _dir
+     * @param {?} _control
+     * @param {?} tabIndex
+     */
+    function MdSelect(_element, _renderer, _viewportRuler, _changeDetectorRef, _dir, _control, tabIndex) {
+        this._element = _element;
+        this._renderer = _renderer;
+        this._viewportRuler = _viewportRuler;
+        this._changeDetectorRef = _changeDetectorRef;
+        this._dir = _dir;
+        this._control = _control;
+        /**
+         * Whether or not the overlay panel is open.
+         */
+        this._panelOpen = false;
+        /**
+         * Whether filling out the select is required in the form.
+         */
+        this._required = false;
+        /**
+         * Whether the select is disabled.
+         */
+        this._disabled = false;
+        /**
+         * The scroll position of the overlay panel, calculated to center the selected option.
+         */
+        this._scrollTop = 0;
+        /**
+         * Whether the component is in multiple selection mode.
+         */
+        this._multiple = false;
+        /**
+         * The animation state of the placeholder.
+         */
+        this._placeholderState = '';
+        /**
+         * View -> model callback called when value changes
+         */
+        this._onChange = function (value) { };
+        /**
+         * View -> model callback called when select has been touched
+         */
+        this._onTouched = function () { };
+        /**
+         * The IDs of child options to be passed to the aria-owns attribute.
+         */
+        this._optionIds = '';
+        /**
+         * The value of the select panel's transform-origin property.
+         */
+        this._transformOrigin = 'top';
+        /**
+         * Whether the panel's animation is done.
+         */
+        this._panelDoneAnimating = false;
+        /**
+         * The y-offset of the overlay panel in relation to the trigger's top start corner.
+         * This must be adjusted to align the selected option text over the trigger text.
+         * when the panel opens. Will change based on the y-position of the selected option.
+         */
+        this._offsetY = 0;
+        /**
+         * This position config ensures that the top "start" corner of the overlay
+         * is aligned with with the top "start" of the origin by default (overlapping
+         * the trigger completely). If the panel cannot fit below the trigger, it
+         * will fall back to a position above the trigger.
+         */
+        this._positions = [
+            {
+                originX: 'start',
+                originY: 'top',
+                overlayX: 'start',
+                overlayY: 'top',
+            },
+            {
+                originX: 'start',
+                originY: 'bottom',
+                overlayX: 'start',
+                overlayY: 'bottom',
+            },
+        ];
+        this._floatPlaceholder = 'auto';
+        /**
+         * Aria label of the select. If not specified, the placeholder will be used as label.
+         */
+        this.ariaLabel = '';
+        /**
+         * Input that can be used to specify the `aria-labelledby` attribute.
+         */
+        this.ariaLabelledby = '';
+        /**
+         * Event emitted when the select has been opened.
+         */
+        this.onOpen = new _angular_core.EventEmitter();
+        /**
+         * Event emitted when the select has been closed.
+         */
+        this.onClose = new _angular_core.EventEmitter();
+        /**
+         * Event emitted when the selected value has been changed by the user.
+         */
+        this.change = new _angular_core.EventEmitter();
+        if (this._control) {
+            this._control.valueAccessor = this;
+        }
+        this._tabIndex = parseInt(tabIndex) || 0;
+    }
+    Object.defineProperty(MdSelect.prototype, "placeholder", {
+        /**
+         * Placeholder to be shown if no value has been selected.
+         * @return {?}
+         */
+        get: function () { return this._placeholder; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            var _this = this;
+            this._placeholder = value;
+            // Must wait to record the trigger width to ensure placeholder width is included.
+            Promise.resolve(null).then(function () { return _this._setTriggerWidth(); });
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "disabled", {
+        /**
+         * Whether the component is disabled.
+         * @return {?}
+         */
+        get: function () { return this._disabled; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            this._disabled = coerceBooleanProperty(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "required", {
+        /**
+         * Whether the component is required.
+         * @return {?}
+         */
+        get: function () { return this._required; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) { this._required = coerceBooleanProperty(value); },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "multiple", {
+        /**
+         * Whether the user should be allowed to select multiple options.
+         * @return {?}
+         */
+        get: function () { return this._multiple; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            if (this._selectionModel) {
+                throw getMdSelectDynamicMultipleError();
+            }
+            this._multiple = coerceBooleanProperty(value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "floatPlaceholder", {
+        /**
+         * Whether to float the placeholder text.
+         * @return {?}
+         */
+        get: function () { return this._floatPlaceholder; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            this._floatPlaceholder = value || 'auto';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "tabIndex", {
+        /**
+         * Tab index for the select element.
+         * @return {?}
+         */
+        get: function () { return this._disabled ? -1 : this._tabIndex; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            if (typeof value !== 'undefined') {
+                this._tabIndex = value;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "color", {
+        /**
+         * Theme color for the component.
+         * @return {?}
+         */
+        get: function () { return this._color; },
+        /**
+         * @param {?} value
+         * @return {?}
+         */
+        set: function (value) {
+            if (value && value !== this._color) {
+                this._renderer.removeClass(this._element.nativeElement, "mat-" + this._color);
+                this._renderer.addClass(this._element.nativeElement, "mat-" + value);
+                this._color = value;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "optionSelectionChanges", {
+        /**
+         * Combined stream of all of the child options' change events.
+         * @return {?}
+         */
+        get: function () {
+            return rxjs_Observable.Observable.merge.apply(rxjs_Observable.Observable, this.options.map(function (option) { return option.onSelectionChange; }));
+        },
+        enumerable: true,
+        configurable: true
+    });
+    /**
+     * @return {?}
+     */
+    MdSelect.prototype.ngOnInit = function () {
+        this._selectionModel = new SelectionModel(this.multiple, null, false);
+        this.color = this.color || 'primary';
+    };
+    /**
+     * @return {?}
+     */
+    MdSelect.prototype.ngAfterContentInit = function () {
+        var _this = this;
+        this._initKeyManager();
+        this._changeSubscription = this.options.changes.startWith(null).subscribe(function () {
+            _this._resetOptions();
+            if (_this._control) {
+                // Defer setting the value in order to avoid the "Expression
+                // has changed after it was checked" errors from Angular.
+                Promise.resolve(null).then(function () { return _this._setSelectionByValue(_this._control.value); });
+            }
+        });
+    };
+    /**
+     * @return {?}
+     */
+    MdSelect.prototype.ngOnDestroy = function () {
+        this._dropSubscriptions();
+        if (this._changeSubscription) {
+            this._changeSubscription.unsubscribe();
+        }
+        if (this._tabSubscription) {
+            this._tabSubscription.unsubscribe();
+        }
+    };
+    /**
+     * Toggles the overlay panel open or closed.
+     * @return {?}
+     */
+    MdSelect.prototype.toggle = function () {
+        this.panelOpen ? this.close() : this.open();
+    };
+    /**
+     * Opens the overlay panel.
+     * @return {?}
+     */
+    MdSelect.prototype.open = function () {
+        if (this.disabled || !this.options.length) {
+            return;
+        }
+        if (!this._triggerWidth) {
+            this._setTriggerWidth();
+        }
+        this._calculateOverlayPosition();
+        this._placeholderState = this._floatPlaceholderState();
+        this._panelOpen = true;
+    };
+    /**
+     * Closes the overlay panel and focuses the host element.
+     * @return {?}
+     */
+    MdSelect.prototype.close = function () {
+        if (this._panelOpen) {
+            this._panelOpen = false;
+            if (this._selectionModel.isEmpty()) {
+                this._placeholderState = '';
+            }
+            this._focusHost();
+        }
+    };
+    /**
+     * Sets the select's value. Part of the ControlValueAccessor interface
+     * required to integrate with Angular's core forms API.
+     *
+     * @param {?} value New value to be written to the model.
+     * @return {?}
+     */
+    MdSelect.prototype.writeValue = function (value) {
+        if (this.options) {
+            this._setSelectionByValue(value);
+        }
+    };
+    /**
+     * Saves a callback function to be invoked when the select's value
+     * changes from user input. Part of the ControlValueAccessor interface
+     * required to integrate with Angular's core forms API.
+     *
+     * @param {?} fn Callback to be triggered when the value changes.
+     * @return {?}
+     */
+    MdSelect.prototype.registerOnChange = function (fn) {
+        this._onChange = fn;
+    };
+    /**
+     * Saves a callback function to be invoked when the select is blurred
+     * by the user. Part of the ControlValueAccessor interface required
+     * to integrate with Angular's core forms API.
+     *
+     * @param {?} fn Callback to be triggered when the component has been touched.
+     * @return {?}
+     */
+    MdSelect.prototype.registerOnTouched = function (fn) {
+        this._onTouched = fn;
+    };
+    /**
+     * Disables the select. Part of the ControlValueAccessor interface required
+     * to integrate with Angular's core forms API.
+     *
+     * @param {?} isDisabled Sets whether the component is disabled.
+     * @return {?}
+     */
+    MdSelect.prototype.setDisabledState = function (isDisabled) {
+        this.disabled = isDisabled;
+    };
+    Object.defineProperty(MdSelect.prototype, "panelOpen", {
+        /**
+         * Whether or not the overlay panel is open.
+         * @return {?}
+         */
+        get: function () {
+            return this._panelOpen;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "selected", {
+        /**
+         * The currently selected option.
+         * @return {?}
+         */
+        get: function () {
+            return this.multiple ? this._selectionModel.selected : this._selectionModel.selected[0];
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MdSelect.prototype, "triggerValue", {
+        /**
+         * The value displayed in the trigger.
+         * @return {?}
+         */
+        get: function () {
+            if (this._multiple) {
+                var /** @type {?} */ selectedOptions = this._selectionModel.selected.map(function (option) { return option.viewValue; });
+                if (this._isRtl()) {
+                    selectedOptions.reverse();
+                }
+                // TODO(crisbeto): delimiter should be configurable for proper localization.
+                return selectedOptions.join(', ');
+            }
+            return this._selectionModel.selected[0].viewValue;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    /**
+     * Whether the element is in RTL mode.
+     * @return {?}
+     */
+    MdSelect.prototype._isRtl = function () {
+        return this._dir ? this._dir.value === 'rtl' : false;
+    };
+    /**
+     * Sets the width of the trigger element. This is necessary to match
+     * the overlay width to the trigger width.
+     * @return {?}
+     */
+    MdSelect.prototype._setTriggerWidth = function () {
+        this._triggerWidth = this._getTriggerRect().width;
+    };
+    /**
+     * Handles the keyboard interactions of a closed select.
+     * @param {?} event
+     * @return {?}
+     */
+    MdSelect.prototype._handleClosedKeydown = function (event) {
+        if (!this.disabled) {
+            if (event.keyCode === ENTER || event.keyCode === SPACE) {
+                event.preventDefault(); // prevents the page from scrolling down when pressing space
+                this.open();
+            }
+            else if (event.keyCode === UP_ARROW || event.keyCode === DOWN_ARROW) {
+                this._handleArrowKey(event);
+            }
+        }
+    };
+    /**
+     * Handles keypresses inside the panel.
+     * @param {?} event
+     * @return {?}
+     */
+    MdSelect.prototype._handlePanelKeydown = function (event) {
+        if (event.keyCode === HOME || event.keyCode === END) {
+            event.preventDefault();
+            event.keyCode === HOME ? this._keyManager.setFirstItemActive() :
+                this._keyManager.setLastItemActive();
+        }
+        else {
+            this._keyManager.onKeydown(event);
+        }
+    };
+    /**
+     * When the panel element is finished transforming in (though not fading in), it
+     * emits an event and focuses an option if the panel is open.
+     * @return {?}
+     */
+    MdSelect.prototype._onPanelDone = function () {
+        if (this.panelOpen) {
+            this._focusCorrectOption();
+            this.onOpen.emit();
+        }
+        else {
+            this.onClose.emit();
+            this._panelDoneAnimating = false;
+            this.overlayDir.offsetX = 0;
+        }
+    };
+    /**
+     * When the panel content is done fading in, the _panelDoneAnimating property is
+     * set so the proper class can be added to the panel.
+     * @return {?}
+     */
+    MdSelect.prototype._onFadeInDone = function () {
+        this._panelDoneAnimating = this.panelOpen;
+    };
+    /**
+     * Calls the touched callback only if the panel is closed. Otherwise, the trigger will
+     * "blur" to the panel when it opens, causing a false positive.
+     * @return {?}
+     */
+    MdSelect.prototype._onBlur = function () {
+        if (!this.panelOpen) {
+            this._onTouched();
+        }
+    };
+    /**
+     * Callback that is invoked when the overlay panel has been attached.
+     * @return {?}
+     */
+    MdSelect.prototype._onAttached = function () {
+        this._calculateOverlayOffsetX();
+        this._setScrollTop();
+    };
+    /**
+     * Sets the scroll position of the scroll container. This must be called after
+     * the overlay pane is attached or the scroll container element will not yet be
+     * present in the DOM.
+     * @return {?}
+     */
+    MdSelect.prototype._setScrollTop = function () {
+        var /** @type {?} */ scrollContainer = this.overlayDir.overlayRef.overlayElement.querySelector('.mat-select-panel');
+        scrollContainer.scrollTop = this._scrollTop;
+    };
+    /**
+     * Sets the selected option based on a value. If no option can be
+     * found with the designated value, the select trigger is cleared.
+     * @param {?} value
+     * @return {?}
+     */
+    MdSelect.prototype._setSelectionByValue = function (value) {
+        var _this = this;
+        var /** @type {?} */ isArray = Array.isArray(value);
+        if (this.multiple && value && !isArray) {
+            throw getMdSelectNonArrayValueError();
+        }
+        this._clearSelection();
+        if (isArray) {
+            value.forEach(function (currentValue) { return _this._selectValue(currentValue); });
+            this._sortValues();
+        }
+        else {
+            this._selectValue(value);
+        }
+        this._setValueWidth();
+        if (this._selectionModel.isEmpty()) {
+            this._placeholderState = '';
+        }
+        this._changeDetectorRef.markForCheck();
+    };
+    /**
+     * Finds and selects and option based on its value.
+     * @param {?} value
+     * @return {?} Option that has the corresponding value.
+     */
+    MdSelect.prototype._selectValue = function (value) {
+        var /** @type {?} */ optionsArray = this.options.toArray();
+        var /** @type {?} */ correspondingOption = optionsArray.find(function (option) { return option.value && option.value === value; });
+        if (correspondingOption) {
+            correspondingOption.select();
+            this._selectionModel.select(correspondingOption);
+            this._keyManager.setActiveItem(optionsArray.indexOf(correspondingOption));
+        }
+        return correspondingOption;
+    };
+    /**
+     * Clears the select trigger and deselects every option in the list.
+     * @param {?=} skip Option that should not be deselected.
+     * @return {?}
+     */
+    MdSelect.prototype._clearSelection = function (skip) {
+        this._selectionModel.clear();
+        this.options.forEach(function (option) {
+            if (option !== skip) {
+                option.deselect();
+            }
+        });
+    };
+    /**
+     * @return {?}
+     */
+    MdSelect.prototype._getTriggerRect = function () {
+        return this.trigger.nativeElement.getBoundingClientRect();
+    };
+    /**
+     * Sets up a key manager to listen to keyboard events on the overlay panel.
+     * @return {?}
+     */
+    MdSelect.prototype._initKeyManager = function () {
+        var _this = this;
+        this._keyManager = new FocusKeyManager(this.options);
+        this._tabSubscription = this._keyManager.tabOut.subscribe(function () { return _this.close(); });
+    };
+    /**
+     * Drops current option subscriptions and IDs and resets from scratch.
+     * @return {?}
+     */
+    MdSelect.prototype._resetOptions = function () {
+        this._dropSubscriptions();
+        this._listenToOptions();
+        this._setOptionIds();
+        this._setOptionMultiple();
+    };
+    /**
+     * Listens to user-generated selection events on each option.
+     * @return {?}
+     */
+    MdSelect.prototype._listenToOptions = function () {
+        var _this = this;
+        this._optionSubscription = this.optionSelectionChanges
+            .filter(function (event) { return event.isUserInput; })
+            .subscribe(function (event) {
+            _this._onSelect(event.source);
+            _this._setValueWidth();
+            if (!_this.multiple) {
+                _this.close();
+            }
+        });
+    };
+    /**
+     * Invoked when an option is clicked.
+     * @param {?} option
+     * @return {?}
+     */
+    MdSelect.prototype._onSelect = function (option) {
+        var /** @type {?} */ wasSelected = this._selectionModel.isSelected(option);
+        // TODO(crisbeto): handle blank/null options inside multi-select.
+        if (this.multiple) {
+            this._selectionModel.toggle(option);
+            wasSelected ? option.deselect() : option.select();
+            this._sortValues();
+        }
+        else {
+            this._clearSelection(option.value == null ? null : option);
+            if (option.value == null) {
+                this._propagateChanges(option.value);
+            }
+            else {
+                this._selectionModel.select(option);
+            }
+        }
+        if (wasSelected !== this._selectionModel.isSelected(option)) {
+            this._propagateChanges();
+        }
+    };
+    /**
+     * Sorts the model values, ensuring that they keep the same
+     * order that they have in the panel.
+     * @return {?}
+     */
+    MdSelect.prototype._sortValues = function () {
+        var _this = this;
+        if (this._multiple) {
+            this._selectionModel.clear();
+            this.options.forEach(function (option) {
+                if (option.selected) {
+                    _this._selectionModel.select(option);
+                }
+            });
+        }
+    };
+    /**
+     * Unsubscribes from all option subscriptions.
+     * @return {?}
+     */
+    MdSelect.prototype._dropSubscriptions = function () {
+        if (this._optionSubscription) {
+            this._optionSubscription.unsubscribe();
+            this._optionSubscription = null;
+        }
+    };
+    /**
+     * Emits change event to set the model value.
+     * @param {?=} fallbackValue
+     * @return {?}
+     */
+    MdSelect.prototype._propagateChanges = function (fallbackValue) {
+        var /** @type {?} */ valueToEmit = null;
+        if (Array.isArray(this.selected)) {
+            valueToEmit = this.selected.map(function (option) { return option.value; });
+        }
+        else {
+            valueToEmit = this.selected ? this.selected.value : fallbackValue;
+        }
+        this._onChange(valueToEmit);
+        this.change.emit(new MdSelectChange(this, valueToEmit));
+    };
+    /**
+     * Records option IDs to pass to the aria-owns property.
+     * @return {?}
+     */
+    MdSelect.prototype._setOptionIds = function () {
+        this._optionIds = this.options.map(function (option) { return option.id; }).join(' ');
+    };
+    /**
+     * Sets the `multiple` property on each option. The promise is necessary
+     * in order to avoid Angular errors when modifying the property after init.
+     * @return {?}
+     */
+    MdSelect.prototype._setOptionMultiple = function () {
+        var _this = this;
+        if (this.multiple) {
+            Promise.resolve(null).then(function () {
+                _this.options.forEach(function (option) { return option.multiple = _this.multiple; });
+            });
+        }
+    };
+    /**
+     * Must set the width of the selected option's value programmatically
+     * because it is absolutely positioned and otherwise will not clip
+     * overflow. The selection arrow is 9px wide, add 4px of padding = 13
+     * @return {?}
+     */
+    MdSelect.prototype._setValueWidth = function () {
+        this._selectedValueWidth = this._triggerWidth - 13;
+    };
+    /**
+     * Focuses the selected item. If no option is selected, it will focus
+     * the first item instead.
+     * @return {?}
+     */
+    MdSelect.prototype._focusCorrectOption = function () {
+        if (this._selectionModel.isEmpty()) {
+            this._keyManager.setFirstItemActive();
+        }
+        else {
+            this._keyManager.setActiveItem(this._getOptionIndex(this._selectionModel.selected[0]));
+        }
+    };
+    /**
+     * Focuses the host element when the panel closes.
+     * @return {?}
+     */
+    MdSelect.prototype._focusHost = function () {
+        this._element.nativeElement.focus();
+    };
+    /**
+     * Gets the index of the provided option in the option list.
+     * @param {?} option
+     * @return {?}
+     */
+    MdSelect.prototype._getOptionIndex = function (option) {
+        return this.options.reduce(function (result, current, index) {
+            return result === undefined ? (option === current ? index : undefined) : result;
+        }, undefined);
+    };
+    /**
+     * Calculates the scroll position and x- and y-offsets of the overlay panel.
+     * @return {?}
+     */
+    MdSelect.prototype._calculateOverlayPosition = function () {
+        var /** @type {?} */ panelHeight = Math.min(this.options.length * SELECT_OPTION_HEIGHT, SELECT_PANEL_MAX_HEIGHT);
+        var /** @type {?} */ scrollContainerHeight = this.options.length * SELECT_OPTION_HEIGHT;
+        // The farthest the panel can be scrolled before it hits the bottom
+        var /** @type {?} */ maxScroll = scrollContainerHeight - panelHeight;
+        if (this._selectionModel.hasValue()) {
+            var /** @type {?} */ selectedIndex = this._getOptionIndex(this._selectionModel.selected[0]);
+            // We must maintain a scroll buffer so the selected option will be scrolled to the
+            // center of the overlay panel rather than the top.
+            var /** @type {?} */ scrollBuffer = panelHeight / 2;
+            this._scrollTop = this._calculateOverlayScroll(selectedIndex, scrollBuffer, maxScroll);
+            this._offsetY = this._calculateOverlayOffsetY(selectedIndex, scrollBuffer, maxScroll);
+        }
+        else {
+            // If no option is selected, the panel centers on the first option. In this case,
+            // we must only adjust for the height difference between the option element
+            // and the trigger element, then multiply it by -1 to ensure the panel moves
+            // in the correct direction up the page.
+            this._offsetY = (SELECT_OPTION_HEIGHT - SELECT_TRIGGER_HEIGHT) / 2 * -1;
+        }
+        this._checkOverlayWithinViewport(maxScroll);
+    };
+    /**
+     * Calculates the scroll position of the select's overlay panel.
+     *
+     * Attempts to center the selected option in the panel. If the option is
+     * too high or too low in the panel to be scrolled to the center, it clamps the
+     * scroll position to the min or max scroll positions respectively.
+     * @param {?} selectedIndex
+     * @param {?} scrollBuffer
+     * @param {?} maxScroll
+     * @return {?}
+     */
+    MdSelect.prototype._calculateOverlayScroll = function (selectedIndex, scrollBuffer, maxScroll) {
+        var /** @type {?} */ optionOffsetFromScrollTop = SELECT_OPTION_HEIGHT * selectedIndex;
+        var /** @type {?} */ halfOptionHeight = SELECT_OPTION_HEIGHT / 2;
+        // Starts at the optionOffsetFromScrollTop, which scrolls the option to the top of the
+        // scroll container, then subtracts the scroll buffer to scroll the option down to
+        // the center of the overlay panel. Half the option height must be re-added to the
+        // scrollTop so the option is centered based on its middle, not its top edge.
+        var /** @type {?} */ optimalScrollPosition = optionOffsetFromScrollTop - scrollBuffer + halfOptionHeight;
+        return clampValue(0, optimalScrollPosition, maxScroll);
+    };
+    /**
+     * Figures out the appropriate animation state for the placeholder.
+     * @return {?}
+     */
+    MdSelect.prototype._getPlaceholderAnimationState = function () {
+        if (this.floatPlaceholder === 'never') {
+            return '';
+        }
+        if (this.floatPlaceholder === 'always') {
+            return this._floatPlaceholderState();
+        }
+        return this._placeholderState;
+    };
+    /**
+     * Determines the CSS `opacity` of the placeholder element.
+     * @return {?}
+     */
+    MdSelect.prototype._getPlaceholderOpacity = function () {
+        return (this.floatPlaceholder !== 'never' || this._selectionModel.isEmpty()) ?
+            '1' : '0';
+    };
+    Object.defineProperty(MdSelect.prototype, "_ariaLabel", {
+        /**
+         * Returns the aria-label of the select component.
+         * @return {?}
+         */
+        get: function () {
+            // If an ariaLabelledby value has been set, the select should not overwrite the
+            // `aria-labelledby` value by setting the ariaLabel to the placeholder.
+            return this.ariaLabelledby ? null : this.ariaLabel || this.placeholder;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    /**
+     * Sets the x-offset of the overlay panel in relation to the trigger's top start corner.
+     * This must be adjusted to align the selected option text over the trigger text when
+     * the panel opens. Will change based on LTR or RTL text direction. Note that the offset
+     * can't be calculated until the panel has been attached, because we need to know the
+     * content width in order to constrain the panel within the viewport.
+     * @return {?}
+     */
+    MdSelect.prototype._calculateOverlayOffsetX = function () {
+        var /** @type {?} */ overlayRect = this.overlayDir.overlayRef.overlayElement.getBoundingClientRect();
+        var /** @type {?} */ viewportRect = this._viewportRuler.getViewportRect();
+        var /** @type {?} */ isRtl = this._isRtl();
+        var /** @type {?} */ offsetX = this.multiple ? SELECT_MULTIPLE_PANEL_PADDING_X : SELECT_PANEL_PADDING_X;
+        if (!isRtl) {
+            offsetX *= -1;
+        }
+        var /** @type {?} */ leftOverflow = 0 - (overlayRect.left + offsetX
+            - (isRtl ? SELECT_PANEL_PADDING_X * 2 : 0));
+        var /** @type {?} */ rightOverflow = overlayRect.right + offsetX - viewportRect.width
+            + (isRtl ? 0 : SELECT_PANEL_PADDING_X * 2);
+        if (leftOverflow > 0) {
+            offsetX += leftOverflow + SELECT_PANEL_VIEWPORT_PADDING;
+        }
+        else if (rightOverflow > 0) {
+            offsetX -= rightOverflow + SELECT_PANEL_VIEWPORT_PADDING;
+        }
+        // Set the offset directly in order to avoid having to go through change detection and
+        // potentially triggering "changed after it was checked" errors.
+        this.overlayDir.offsetX = offsetX;
+        this.overlayDir.overlayRef.updatePosition();
+    };
+    /**
+     * Calculates the y-offset of the select's overlay panel in relation to the
+     * top start corner of the trigger. It has to be adjusted in order for the
+     * selected option to be aligned over the trigger when the panel opens.
+     * @param {?} selectedIndex
+     * @param {?} scrollBuffer
+     * @param {?} maxScroll
+     * @return {?}
+     */
+    MdSelect.prototype._calculateOverlayOffsetY = function (selectedIndex, scrollBuffer, maxScroll) {
+        var /** @type {?} */ optionOffsetFromPanelTop;
+        if (this._scrollTop === 0) {
+            optionOffsetFromPanelTop = selectedIndex * SELECT_OPTION_HEIGHT;
+        }
+        else if (this._scrollTop === maxScroll) {
+            var /** @type {?} */ firstDisplayedIndex = this.options.length - SELECT_MAX_OPTIONS_DISPLAYED;
+            var /** @type {?} */ selectedDisplayIndex = selectedIndex - firstDisplayedIndex;
+            // Because the panel height is longer than the height of the options alone,
+            // there is always extra padding at the top or bottom of the panel. When
+            // scrolled to the very bottom, this padding is at the top of the panel and
+            // must be added to the offset.
+            optionOffsetFromPanelTop =
+                selectedDisplayIndex * SELECT_OPTION_HEIGHT + SELECT_PANEL_PADDING_Y;
+        }
+        else {
+            // If the option was scrolled to the middle of the panel using a scroll buffer,
+            // its offset will be the scroll buffer minus the half height that was added to
+            // center it.
+            optionOffsetFromPanelTop = scrollBuffer - SELECT_OPTION_HEIGHT / 2;
+        }
+        // The final offset is the option's offset from the top, adjusted for the height
+        // difference, multiplied by -1 to ensure that the overlay moves in the correct
+        // direction up the page.
+        return optionOffsetFromPanelTop * -1 - SELECT_OPTION_HEIGHT_ADJUSTMENT;
+    };
+    /**
+     * Checks that the attempted overlay position will fit within the viewport.
+     * If it will not fit, tries to adjust the scroll position and the associated
+     * y-offset so the panel can open fully on-screen. If it still won't fit,
+     * sets the offset back to 0 to allow the fallback position to take over.
+     * @param {?} maxScroll
+     * @return {?}
+     */
+    MdSelect.prototype._checkOverlayWithinViewport = function (maxScroll) {
+        var /** @type {?} */ viewportRect = this._viewportRuler.getViewportRect();
+        var /** @type {?} */ triggerRect = this._getTriggerRect();
+        var /** @type {?} */ topSpaceAvailable = triggerRect.top - SELECT_PANEL_VIEWPORT_PADDING;
+        var /** @type {?} */ bottomSpaceAvailable = viewportRect.height - triggerRect.bottom - SELECT_PANEL_VIEWPORT_PADDING;
+        var /** @type {?} */ panelHeightTop = Math.abs(this._offsetY);
+        var /** @type {?} */ totalPanelHeight = Math.min(this.options.length * SELECT_OPTION_HEIGHT, SELECT_PANEL_MAX_HEIGHT);
+        var /** @type {?} */ panelHeightBottom = totalPanelHeight - panelHeightTop - triggerRect.height;
+        if (panelHeightBottom > bottomSpaceAvailable) {
+            this._adjustPanelUp(panelHeightBottom, bottomSpaceAvailable);
+        }
+        else if (panelHeightTop > topSpaceAvailable) {
+            this._adjustPanelDown(panelHeightTop, topSpaceAvailable, maxScroll);
+        }
+        else {
+            this._transformOrigin = this._getOriginBasedOnOption();
+        }
+    };
+    /**
+     * Adjusts the overlay panel up to fit in the viewport.
+     * @param {?} panelHeightBottom
+     * @param {?} bottomSpaceAvailable
+     * @return {?}
+     */
+    MdSelect.prototype._adjustPanelUp = function (panelHeightBottom, bottomSpaceAvailable) {
+        var /** @type {?} */ distanceBelowViewport = panelHeightBottom - bottomSpaceAvailable;
+        // Scrolls the panel up by the distance it was extending past the boundary, then
+        // adjusts the offset by that amount to move the panel up into the viewport.
+        this._scrollTop -= distanceBelowViewport;
+        this._offsetY -= distanceBelowViewport;
+        this._transformOrigin = this._getOriginBasedOnOption();
+        // If the panel is scrolled to the very top, it won't be able to fit the panel
+        // by scrolling, so set the offset to 0 to allow the fallback position to take
+        // effect.
+        if (this._scrollTop <= 0) {
+            this._scrollTop = 0;
+            this._offsetY = 0;
+            this._transformOrigin = "50% bottom 0px";
+        }
+    };
+    /**
+     * Adjusts the overlay panel down to fit in the viewport.
+     * @param {?} panelHeightTop
+     * @param {?} topSpaceAvailable
+     * @param {?} maxScroll
+     * @return {?}
+     */
+    MdSelect.prototype._adjustPanelDown = function (panelHeightTop, topSpaceAvailable, maxScroll) {
+        var /** @type {?} */ distanceAboveViewport = panelHeightTop - topSpaceAvailable;
+        // Scrolls the panel down by the distance it was extending past the boundary, then
+        // adjusts the offset by that amount to move the panel down into the viewport.
+        this._scrollTop += distanceAboveViewport;
+        this._offsetY += distanceAboveViewport;
+        this._transformOrigin = this._getOriginBasedOnOption();
+        // If the panel is scrolled to the very bottom, it won't be able to fit the
+        // panel by scrolling, so set the offset to 0 to allow the fallback position
+        // to take effect.
+        if (this._scrollTop >= maxScroll) {
+            this._scrollTop = maxScroll;
+            this._offsetY = 0;
+            this._transformOrigin = "50% top 0px";
+            return;
+        }
+    };
+    /**
+     * Sets the transform origin point based on the selected option.
+     * @return {?}
+     */
+    MdSelect.prototype._getOriginBasedOnOption = function () {
+        var /** @type {?} */ originY = Math.abs(this._offsetY) - SELECT_OPTION_HEIGHT_ADJUSTMENT + SELECT_OPTION_HEIGHT / 2;
+        return "50% " + originY + "px 0px";
+    };
+    /**
+     * Figures out the floating placeholder state value.
+     * @return {?}
+     */
+    MdSelect.prototype._floatPlaceholderState = function () {
+        return this._isRtl() ? 'floating-rtl' : 'floating-ltr';
+    };
+    /**
+     * Handles the user pressing the arrow keys on a closed select.
+     * @param {?} event
+     * @return {?}
+     */
+    MdSelect.prototype._handleArrowKey = function (event) {
+        if (this._multiple) {
+            event.preventDefault();
+            this.open();
+        }
+        else {
+            var /** @type {?} */ prevActiveItem = this._keyManager.activeItem;
+            // Cycle though the select options even when the select is closed,
+            // matching the behavior of the native select element.
+            // TODO(crisbeto): native selects also cycle through the options with left/right arrows,
+            // however the key manager only supports up/down at the moment.
+            this._keyManager.onKeydown(event);
+            var /** @type {?} */ currentActiveItem = (this._keyManager.activeItem);
+            if (currentActiveItem !== prevActiveItem) {
+                this._clearSelection();
+                this._setSelectionByValue(currentActiveItem.value);
+                this._propagateChanges();
+            }
+        }
+    };
+    return MdSelect;
+}());
+MdSelect.decorators = [
+    { type: _angular_core.Component, args: [{ selector: 'md-select, mat-select',
+                template: "<div class=\"mat-select-trigger\" cdk-overlay-origin (click)=\"toggle()\" #origin=\"cdkOverlayOrigin\" #trigger> <span class=\"mat-select-placeholder\" [class.mat-floating-placeholder]=\"_selectionModel.hasValue()\" [@transformPlaceholder]=\"_getPlaceholderAnimationState()\" [style.opacity]=\"_getPlaceholderOpacity()\" [style.width.px]=\"_selectedValueWidth\"> {{ placeholder }} </span> <span class=\"mat-select-value\" *ngIf=\"_selectionModel.hasValue()\"> <span class=\"mat-select-value-text\">{{ triggerValue }}</span> </span> <span class=\"mat-select-arrow\"></span> <span class=\"mat-select-underline\"></span> </div> <ng-template cdk-connected-overlay [origin]=\"origin\" [open]=\"panelOpen\" hasBackdrop (backdropClick)=\"close()\" backdropClass=\"cdk-overlay-transparent-backdrop\" [positions]=\"_positions\" [minWidth]=\"_triggerWidth\" [offsetY]=\"_offsetY\" (attach)=\"_onAttached()\" (detach)=\"close()\"> <div class=\"mat-select-panel\" [@transformPanel]=\"'showing'\" (@transformPanel.done)=\"_onPanelDone()\" (keydown)=\"_handlePanelKeydown($event)\" [style.transformOrigin]=\"_transformOrigin\" [class.mat-select-panel-done-animating]=\"_panelDoneAnimating\" [ngClass]=\"'mat-' + color\"> <div class=\"mat-select-content\" [@fadeInContent]=\"'showing'\" (@fadeInContent.done)=\"_onFadeInDone()\"> <ng-content></ng-content> </div> </div> </ng-template> ",
+                styles: [".mat-select{display:inline-block;outline:0;font-family:Roboto,\"Helvetica Neue\",sans-serif}.mat-select-trigger{display:flex;align-items:center;height:30px;min-width:112px;cursor:pointer;position:relative;box-sizing:border-box;font-size:16px}[aria-disabled=true] .mat-select-trigger{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;cursor:default}.mat-select-underline{position:absolute;bottom:0;left:0;right:0;height:1px}[aria-disabled=true] .mat-select-underline{background-image:linear-gradient(to right,rgba(0,0,0,.26) 0,rgba(0,0,0,.26) 33%,transparent 0);background-size:4px 1px;background-repeat:repeat-x;background-color:transparent;background-position:0 bottom}.mat-select-placeholder{position:relative;padding:0 2px;transform-origin:left top;flex-grow:1}.mat-select-placeholder.mat-floating-placeholder{top:-22px;left:-2px;text-align:left;transform:scale(.75)}[dir=rtl] .mat-select-placeholder{transform-origin:right top}[dir=rtl] .mat-select-placeholder.mat-floating-placeholder{left:2px;text-align:right}[aria-required=true] .mat-select-placeholder::after{content:'*'}.mat-select-value{position:absolute;max-width:calc(100% - 18px);flex-grow:1;top:0;left:0;bottom:0;display:flex;align-items:center}[dir=rtl] .mat-select-value{left:auto;right:0}.mat-select-value-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:30px}.mat-select-arrow{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid;margin:0 4px}.mat-select-panel{box-shadow:0 5px 5px -3px rgba(0,0,0,.2),0 8px 10px 1px rgba(0,0,0,.14),0 3px 14px 2px rgba(0,0,0,.12);min-width:112px;max-width:280px;overflow:auto;-webkit-overflow-scrolling:touch;padding-top:0;padding-bottom:0;max-height:256px;min-width:100%}@media screen and (-ms-high-contrast:active){.mat-select-panel{outline:solid 1px}} /*# sourceMappingURL=select.css.map */ "],
+                encapsulation: _angular_core.ViewEncapsulation.None,
+                host: {
+                    'role': 'listbox',
+                    '[attr.tabindex]': 'tabIndex',
+                    '[attr.aria-label]': '_ariaLabel',
+                    '[attr.aria-labelledby]': 'ariaLabelledby',
+                    '[attr.aria-required]': 'required.toString()',
+                    '[attr.aria-disabled]': 'disabled.toString()',
+                    '[attr.aria-invalid]': '_control?.invalid || "false"',
+                    '[attr.aria-owns]': '_optionIds',
+                    '[class.mat-select-disabled]': 'disabled',
+                    '[class.mat-select]': 'true',
+                    '(keydown)': '_handleClosedKeydown($event)',
+                    '(blur)': '_onBlur()',
+                },
+                animations: [
+                    transformPlaceholder,
+                    transformPanel,
+                    fadeInContent
+                ],
+                exportAs: 'mdSelect',
+            },] },
+];
+/**
+ * @nocollapse
+ */
+MdSelect.ctorParameters = function () { return [
+    { type: _angular_core.ElementRef, },
+    { type: _angular_core.Renderer2, },
+    { type: ViewportRuler, },
+    { type: _angular_core.ChangeDetectorRef, },
+    { type: Dir, decorators: [{ type: _angular_core.Optional },] },
+    { type: _angular_forms.NgControl, decorators: [{ type: _angular_core.Self }, { type: _angular_core.Optional },] },
+    { type: undefined, decorators: [{ type: _angular_core.Attribute, args: ['tabindex',] },] },
+]; };
+MdSelect.propDecorators = {
+    'trigger': [{ type: _angular_core.ViewChild, args: ['trigger',] },],
+    'overlayDir': [{ type: _angular_core.ViewChild, args: [ConnectedOverlayDirective,] },],
+    'options': [{ type: _angular_core.ContentChildren, args: [MdOption,] },],
+    'placeholder': [{ type: _angular_core.Input },],
+    'disabled': [{ type: _angular_core.Input },],
+    'required': [{ type: _angular_core.Input },],
+    'multiple': [{ type: _angular_core.Input },],
+    'floatPlaceholder': [{ type: _angular_core.Input },],
+    'tabIndex': [{ type: _angular_core.Input },],
+    'ariaLabel': [{ type: _angular_core.Input, args: ['aria-label',] },],
+    'ariaLabelledby': [{ type: _angular_core.Input, args: ['aria-labelledby',] },],
+    'color': [{ type: _angular_core.Input },],
+    'onOpen': [{ type: _angular_core.Output },],
+    'onClose': [{ type: _angular_core.Output },],
+    'change': [{ type: _angular_core.Output },],
+};
+/**
+ * Clamps a value n between min and max values.
+ * @param {?} min
+ * @param {?} n
+ * @param {?} max
+ * @return {?}
+ */
+function clampValue(min, n, max) {
+    return Math.min(Math.max(min, n), max);
+}
+var MdSelectModule = (function () {
+    function MdSelectModule() {
+    }
+    return MdSelectModule;
+}());
+MdSelectModule.decorators = [
+    { type: _angular_core.NgModule, args: [{
+                imports: [
+                    _angular_common.CommonModule,
+                    OverlayModule,
+                    MdOptionModule,
+                    MdCommonModule,
+                ],
+                exports: [MdSelect, MdOptionModule, MdCommonModule],
+                declarations: [MdSelect],
+            },] },
+];
+/**
+ * @nocollapse
+ */
+MdSelectModule.ctorParameters = function () { return []; };
 /**
  * Mixin to augment a directive with a `disabled` property.
  * @template T
@@ -7816,6 +9037,21 @@ exports.AUTOCOMPLETE_OPTION_HEIGHT = AUTOCOMPLETE_OPTION_HEIGHT;
 exports.AUTOCOMPLETE_PANEL_HEIGHT = AUTOCOMPLETE_PANEL_HEIGHT;
 exports.MD_AUTOCOMPLETE_VALUE_ACCESSOR = MD_AUTOCOMPLETE_VALUE_ACCESSOR;
 exports.MdAutocompleteTrigger = MdAutocompleteTrigger;
+exports.MdSelectModule = MdSelectModule;
+exports.fadeInContent = fadeInContent;
+exports.transformPanel = transformPanel;
+exports.transformPlaceholder = transformPlaceholder;
+exports.SELECT_OPTION_HEIGHT = SELECT_OPTION_HEIGHT;
+exports.SELECT_PANEL_MAX_HEIGHT = SELECT_PANEL_MAX_HEIGHT;
+exports.SELECT_MAX_OPTIONS_DISPLAYED = SELECT_MAX_OPTIONS_DISPLAYED;
+exports.SELECT_TRIGGER_HEIGHT = SELECT_TRIGGER_HEIGHT;
+exports.SELECT_OPTION_HEIGHT_ADJUSTMENT = SELECT_OPTION_HEIGHT_ADJUSTMENT;
+exports.SELECT_PANEL_PADDING_X = SELECT_PANEL_PADDING_X;
+exports.SELECT_MULTIPLE_PANEL_PADDING_X = SELECT_MULTIPLE_PANEL_PADDING_X;
+exports.SELECT_PANEL_PADDING_Y = SELECT_PANEL_PADDING_Y;
+exports.SELECT_PANEL_VIEWPORT_PADDING = SELECT_PANEL_VIEWPORT_PADDING;
+exports.MdSelectChange = MdSelectChange;
+exports.MdSelect = MdSelect;
 exports.MdSliderModule = MdSliderModule;
 exports.MD_SLIDER_VALUE_ACCESSOR = MD_SLIDER_VALUE_ACCESSOR;
 exports.MdSliderChange = MdSliderChange;
