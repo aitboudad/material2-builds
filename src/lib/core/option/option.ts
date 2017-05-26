@@ -98,8 +98,13 @@ export class MdOption {
    * select's trigger.
    */
   get viewValue(): string {
+    const hostElement = this._getHostElement();
+    if (!hostElement || !hostElement.textContent) {
+      return '';
+    }
+
     // TODO(kara): Add input property alternative for node envs.
-    return this._getHostElement().textContent.trim();
+    return hostElement.textContent.trim();
   }
 
   /** Selects the option. */
@@ -116,7 +121,12 @@ export class MdOption {
 
   /** Sets focus onto this option. */
   focus(): void {
-    this._getHostElement().focus();
+    const hostElement = this._getHostElement();
+    if (!hostElement || !hostElement.focus) {
+      return;
+    }
+
+    hostElement.focus();
   }
 
   /**

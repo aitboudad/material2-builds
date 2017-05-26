@@ -5,7 +5,7 @@
  */
 
 export * from './core';
-export * from './module';
+// export * from './module';
 
 export * from './autocomplete/index';
 export * from './button/index';
