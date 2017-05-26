@@ -109,7 +109,7 @@ export {CompatibilityModule, NoConflictStyleCompatibilityMode} from './compatibi
 export {MdCommonModule, MATERIAL_SANITY_CHECKS} from './common-behaviors/common-module';
 
 // Datetime
-export * from './datetime/index';
+// export * from './datetime/index';
 
 // Placeholder
 export {

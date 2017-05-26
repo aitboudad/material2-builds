@@ -29,7 +29,7 @@ import {Observable} from 'rxjs/Observable';
 import {MdOptionSelectionChange, MdOption} from '../core/option/option';
 import {ENTER, UP_ARROW, DOWN_ARROW, ESCAPE} from '../core/keyboard/keycodes';
 import {Dir} from '../core/rtl/dir';
-import {MdInputContainer} from '../input/input-container';
+// import {MdInputContainer} from '../input/input-container';
 import {Subscription} from 'rxjs/Subscription';
 import 'rxjs/add/observable/merge';
 import 'rxjs/add/observable/fromEvent';
@@ -90,6 +90,8 @@ export class MdAutocompleteTrigger implements ControlValueAccessor, OnDestroy {
   private _portal: TemplatePortal;
   private _panelOpen: boolean = false;
 
+  private _inputContainer;
+
   /** The subscription to positioning changes in the autocomplete panel. */
   private _panelPositionSubscription: Subscription;
 
@@ -122,7 +124,6 @@ export class MdAutocompleteTrigger implements ControlValueAccessor, OnDestroy {
               private _viewContainerRef: ViewContainerRef,
               private _changeDetectorRef: ChangeDetectorRef,
               @Optional() private _dir: Dir, private _zone: NgZone,
-              @Optional() @Host() private _inputContainer: MdInputContainer,
               @Optional() @Inject(DOCUMENT) private _document: any) {}
 
   ngOnDestroy() {
@@ -298,7 +299,7 @@ export class MdAutocompleteTrigger implements ControlValueAccessor, OnDestroy {
 
   /** If the placeholder has been manually elevated, return it to its normal state. */
   private _resetPlaceholder(): void  {
-    if (this._manuallyFloatingPlaceholder) {
+    if (this._manuallyFloatingPlaceholder && this._inputContainer) {
       this._inputContainer.floatPlaceholder = 'auto';
       this._manuallyFloatingPlaceholder = false;
     }
