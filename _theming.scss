@@ -1584,7 +1584,12 @@ $mat-menu-icon-margin: 16px !default;
     color: mat-color($foreground, text);
 
     .mat-option {
-      &.mat-selected:not(.mat-active) {
+      // Selected options in autocompletes should not be gray, but we
+      // only want to override the background for selected options if
+      // they are *not* in hover or focus state. This change has to be
+      // made here because base option styles are shared between the
+      // autocomplete and the select.
+      &.mat-selected:not(.mat-active):not(:hover) {
         background: mat-color($background, card);
         color: mat-color($foreground, text);
       }
@@ -2076,7 +2081,7 @@ $mat-menu-icon-margin: 16px !default;
     color: mat-color($foreground, disabled-text);
   }
 
-  // See mat-input-placeholder-floating mixin in input.scss
+  // See mat-input-placeholder-floating mixin in input-container.scss
   input.mat-input-element:-webkit-autofill + .mat-input-placeholder,
   .mat-focused .mat-input-placeholder.mat-float {
     .mat-placeholder-required {
@@ -2086,16 +2091,17 @@ $mat-menu-icon-margin: 16px !default;
 
   .mat-input-underline {
     border-color: $input-underline-color;
+  }
 
-    .mat-input-ripple {
-      background-color: $input-underline-focused-color;
+  .mat-input-ripple {
+    background-color: $input-underline-focused-color;
 
-      &.mat-accent {
-        background-color: $input-underline-color-accent;
-      }
-      &.mat-warn {
-        background-color: $input-underline-color-warn;
-      }
+    &.mat-accent {
+      background-color: $input-underline-color-accent;
+    }
+
+    &.mat-warn {
+      background-color: $input-underline-color-warn;
     }
   }
 
@@ -2103,9 +2109,13 @@ $mat-menu-icon-margin: 16px !default;
   // achieved with the ng-* classes, we use this approach in order to ensure that the same
   // logic is used to style the error state and to show the error messages.
   .mat-input-invalid {
-    .mat-input-placeholder,
-    .mat-placeholder-required {
+    .mat-input-placeholder {
       color: $input-underline-color-warn;
+
+      &.mat-accent,
+      &.mat-float .mat-placeholder-required {
+        color: $input-underline-color-warn;
+      }
     }
 
     .mat-input-ripple {
