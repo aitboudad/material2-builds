@@ -1760,7 +1760,7 @@ class MdOption {
      */
     get viewValue() {
         const /** @type {?} */ hostElement = this._getHostElement();
-        if (!hostElement) {
+        if (!hostElement || !hostElement.textContent) {
             return '';
         }
         // TODO(kara): Add input property alternative for node envs.
@@ -1788,7 +1788,7 @@ class MdOption {
      */
     focus() {
         const /** @type {?} */ hostElement = this._getHostElement();
-        if (!hostElement) {
+        if (!hostElement || !hostElement.focus) {
             return;
         }
         hostElement.focus();

@@ -1743,7 +1743,7 @@ var MdOption = (function () {
          */
         get: function () {
             var /** @type {?} */ hostElement = this._getHostElement();
-            if (!hostElement) {
+            if (!hostElement || !hostElement.textContent) {
                 return '';
             }
             // TODO(kara): Add input property alternative for node envs.
@@ -1774,7 +1774,7 @@ var MdOption = (function () {
      */
     MdOption.prototype.focus = function () {
         var /** @type {?} */ hostElement = this._getHostElement();
-        if (!hostElement) {
+        if (!hostElement || !hostElement.focus) {
             return;
         }
         hostElement.focus();
