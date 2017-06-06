@@ -319,7 +319,7 @@ export class MdSidenav implements AfterContentInit, OnDestroy {
   // technically it is a sibling of MdSidenav (on the content tree) and isn't updated when MdSidenav
   // changes its state.
   templateUrl: 'sidenav-container.html',
-  styleUrls: [
+  // styleUrls: [
     'sidenav.css',
     'sidenav-transitions.css',
   ],

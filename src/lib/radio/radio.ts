@@ -294,7 +294,7 @@ export class MdRadioGroup extends _MdRadioGroupMixinBase
   moduleId: module.id,
   selector: 'md-radio-button, mat-radio-button',
   templateUrl: 'radio.html',
-  styleUrls: ['radio.css'],
+  // styleUrls: ['radio.css'],
   encapsulation: ViewEncapsulation.None,
   host: {
     '[class.mat-radio-button]': 'true',

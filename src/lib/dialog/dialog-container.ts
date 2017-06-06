@@ -41,7 +41,7 @@ export function throwMdDialogContentAlreadyAttachedError() {
   moduleId: module.id,
   selector: 'md-dialog-container, mat-dialog-container',
   templateUrl: 'dialog-container.html',
-  styleUrls: ['dialog.css'],
+  // styleUrls: ['dialog.css'],
   encapsulation: ViewEncapsulation.None,
   animations: [
     trigger('slideDialog', [

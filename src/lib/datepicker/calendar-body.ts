@@ -28,7 +28,7 @@ export class MdCalendarCell {
   moduleId: module.id,
   selector: '[md-calendar-body]',
   templateUrl: 'calendar-body.html',
-  styleUrls: ['calendar-body.css'],
+  // styleUrls: ['calendar-body.css'],
   host: {
     'class': 'mat-calendar-body',
   },

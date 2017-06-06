@@ -25,7 +25,7 @@ import {
     '[class.mat-progress-bar]': 'true',
   },
   templateUrl: 'progress-bar.html',
-  styleUrls: ['progress-bar.css'],
+  // styleUrls: ['progress-bar.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MdProgressBar {

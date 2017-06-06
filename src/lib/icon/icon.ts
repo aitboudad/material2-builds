@@ -58,7 +58,7 @@ export const _MdIconMixinBase = mixinColor(MdIconBase);
   moduleId: module.id,
   template: '<ng-content></ng-content>',
   selector: 'md-icon, mat-icon',
-  styleUrls: ['icon.css'],
+  // styleUrls: ['icon.css'],
   inputs: ['color'],
   host: {
     'role': 'img',

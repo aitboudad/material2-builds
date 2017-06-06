@@ -279,7 +279,7 @@ export class MdInputDirective {
   moduleId: module.id,
   selector: 'md-input-container, mat-input-container',
   templateUrl: 'input-container.html',
-  styleUrls: ['input-container.css'],
+  // styleUrls: ['input-container.css'],
   animations: [
     trigger('transitionMessages', [
       state('enter', style({ opacity: 1, transform: 'translateY(0%)' })),

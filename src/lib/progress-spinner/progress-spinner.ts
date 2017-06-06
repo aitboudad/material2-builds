@@ -69,7 +69,7 @@ export const _MdProgressSpinnerMixinBase = mixinColor(MdProgressSpinnerBase, 'pr
   },
   inputs: ['color'],
   templateUrl: 'progress-spinner.html',
-  styleUrls: ['progress-spinner.css'],
+  // styleUrls: ['progress-spinner.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MdProgressSpinner extends _MdProgressSpinnerMixinBase
@@ -274,7 +274,7 @@ export class MdProgressSpinner extends _MdProgressSpinnerMixinBase
   },
   inputs: ['color'],
   templateUrl: 'progress-spinner.html',
-  styleUrls: ['progress-spinner.css'],
+  // styleUrls: ['progress-spinner.css'],
 })
 export class MdSpinner extends MdProgressSpinner implements OnDestroy {
 

@@ -10,7 +10,7 @@ import {MdSnackBarRef} from './snack-bar-ref';
   moduleId: module.id,
   selector: 'simple-snack-bar',
   templateUrl: 'simple-snack-bar.html',
-  styleUrls: ['simple-snack-bar.css'],
+  // styleUrls: ['simple-snack-bar.css'],
   encapsulation: ViewEncapsulation.None,
   host: {
     '[class.mat-simple-snackbar]': 'true',

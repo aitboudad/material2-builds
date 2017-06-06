@@ -29,7 +29,7 @@ import {ESCAPE} from '../core/keyboard/keycodes';
   selector: 'md-menu, mat-menu',
   host: {'role': 'menu'},
   templateUrl: 'menu.html',
-  styleUrls: ['menu.css'],
+  // styleUrls: ['menu.css'],
   encapsulation: ViewEncapsulation.None,
   animations: [
     transformMenu,

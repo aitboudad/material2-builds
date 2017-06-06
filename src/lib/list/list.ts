@@ -29,7 +29,7 @@ export class MdListDivider {}
     'role': 'list'
   },
   template: '<ng-content></ng-content>',
-  styleUrls: ['list.css'],
+  // styleUrls: ['list.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class MdList {

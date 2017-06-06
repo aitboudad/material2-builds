@@ -30,7 +30,7 @@ const MD_FIT_MODE = 'fit';
   moduleId: module.id,
   selector: 'md-grid-list, mat-grid-list',
   templateUrl: 'grid-list.html',
-  styleUrls: ['grid-list.css'],
+  // styleUrls: ['grid-list.css'],
   host: {
     'role': 'list',
     '[class.mat-grid-list]': 'true',

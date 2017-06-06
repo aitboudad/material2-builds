@@ -106,7 +106,7 @@ export const _MdSliderMixinBase = mixinDisabled(MdSliderBase);
     '[class.mat-slider-hide-last-tick]': 'disabled || _isMinValue && _thumbGap && _invertAxis',
   },
   templateUrl: 'slider.html',
-  styleUrls: ['slider.css'],
+  // styleUrls: ['slider.css'],
   inputs: ['disabled'],
   encapsulation: ViewEncapsulation.None,
 })

@@ -36,7 +36,7 @@ export type MdTabHeaderPosition = 'above' | 'below';
   moduleId: module.id,
   selector: 'md-tab-group, mat-tab-group',
   templateUrl: 'tab-group.html',
-  styleUrls: ['tab-group.css'],
+  // styleUrls: ['tab-group.css'],
   host: {
     '[class.mat-tab-group]': 'true',
     '[class.mat-tab-group-dynamic-height]': 'dynamicHeight',
