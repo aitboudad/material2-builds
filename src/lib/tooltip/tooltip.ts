@@ -385,10 +385,10 @@ export class TooltipComponent {
   tooltipClass: string|string[]|Set<string>|{[key: string]: any};
 
   /** The timeout ID of any current timer set to show the tooltip */
-  _showTimeoutId: number;
+  _showTimeoutId: any;
 
   /** The timeout ID of any current timer set to hide the tooltip */
-  _hideTimeoutId: number;
+  _hideTimeoutId: any;
 
   /** Property watched by the animation framework to show or hide the tooltip */
   _visibility: TooltipVisibility = 'initial';
