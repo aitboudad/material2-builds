@@ -59,7 +59,7 @@ const EXAGGERATED_OVERSCROLL = 60;
   moduleId: module.id,
   selector: 'md-tab-header, mat-tab-header',
   templateUrl: 'tab-header.html',
-  styleUrls: ['tab-header.css'],
+  // styleUrls: ['tab-header.css'],
   encapsulation: ViewEncapsulation.None,
   host: {
     'class': 'mat-tab-header',

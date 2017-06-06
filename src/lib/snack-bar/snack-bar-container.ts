@@ -50,7 +50,7 @@ export const HIDE_ANIMATION = '195ms cubic-bezier(0.0,0.0,0.2,1)';
   moduleId: module.id,
   selector: 'snack-bar-container',
   templateUrl: 'snack-bar-container.html',
-  styleUrls: ['snack-bar-container.css'],
+  // styleUrls: ['snack-bar-container.css'],
   host: {
     'role': 'alert',
     '[@state]': 'animationState',

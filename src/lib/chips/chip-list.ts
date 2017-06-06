@@ -50,7 +50,7 @@ import {Subscription} from 'rxjs/Subscription';
   queries: {
     chips: new ContentChildren(MdChip)
   },
-  styleUrls: ['chips.css'],
+  // styleUrls: ['chips.css'],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush
 })

@@ -35,7 +35,7 @@ export class MdListDivider {}
   selector: 'md-list, mat-list, md-nav-list, mat-nav-list',
   host: {'role': 'list'},
   template: '<ng-content></ng-content>',
-  styleUrls: ['list.css'],
+  // styleUrls: ['list.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class MdList {

@@ -45,7 +45,7 @@ import {MATERIAL_COMPATIBILITY_MODE} from '../core';
   moduleId: module.id,
   selector: 'md-calendar',
   templateUrl: 'calendar.html',
-  styleUrls: ['calendar.css'],
+  // styleUrls: ['calendar.css'],
   host: {
     'class': 'mat-calendar',
   },

@@ -119,7 +119,7 @@ export const _MdSelectMixinBase = mixinColor(mixinDisabled(MdSelectBase), 'prima
   moduleId: module.id,
   selector: 'md-select, mat-select',
   templateUrl: 'select.html',
-  styleUrls: ['select.css'],
+  // styleUrls: ['select.css'],
   inputs: ['color', 'disabled'],
   encapsulation: ViewEncapsulation.None,
   host: {

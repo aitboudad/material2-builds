@@ -70,7 +70,7 @@ export const _MdSlideToggleMixinBase = mixinColor(mixinDisabled(MdSlideToggleBas
     '[class.mat-slide-toggle-label-before]': 'labelPosition == "before"',
   },
   templateUrl: 'slide-toggle.html',
-  styleUrls: ['slide-toggle.css'],
+  // styleUrls: ['slide-toggle.css'],
   providers: [MD_SLIDE_TOGGLE_VALUE_ACCESSOR],
   inputs: ['disabled', 'color'],
   encapsulation: ViewEncapsulation.None,

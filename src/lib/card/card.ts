@@ -146,7 +146,7 @@ export class MdCardAvatar {}
   moduleId: module.id,
   selector: 'md-card, mat-card',
   templateUrl: 'card.html',
-  styleUrls: ['card.css'],
+  // styleUrls: ['card.css'],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {'class': 'mat-card'}

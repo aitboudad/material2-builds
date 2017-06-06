@@ -34,7 +34,7 @@ export const _MdToolbarMixinBase = mixinColor(MdToolbarBase);
   moduleId: module.id,
   selector: 'md-toolbar, mat-toolbar',
   templateUrl: 'toolbar.html',
-  styleUrls: ['toolbar.css'],
+  // styleUrls: ['toolbar.css'],
   inputs: ['color'],
   host: {
     'class': 'mat-toolbar',

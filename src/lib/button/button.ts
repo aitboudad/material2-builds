@@ -119,7 +119,7 @@ export const _MdButtonMixinBase = mixinColor(mixinDisabled(MdButtonBase));
     '[disabled]': 'disabled || null',
   },
   templateUrl: 'button.html',
-  styleUrls: ['button.css'],
+  // styleUrls: ['button.css'],
   inputs: ['disabled', 'color'],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -198,7 +198,7 @@ export class MdButton extends _MdButtonMixinBase implements OnDestroy, CanDisabl
   },
   inputs: ['disabled', 'color'],
   templateUrl: 'button.html',
-  styleUrls: ['button.css'],
+  // styleUrls: ['button.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class MdAnchor extends MdButton {

@@ -38,7 +38,7 @@ import {Subject} from 'rxjs/Subject';
   moduleId: module.id,
   selector: '[md-tab-nav-bar], [mat-tab-nav-bar]',
   templateUrl: 'tab-nav-bar.html',
-  styleUrls: ['tab-nav-bar.css'],
+  // styleUrls: ['tab-nav-bar.css'],
   host: {'class': 'mat-tab-nav-bar'},
   encapsulation: ViewEncapsulation.None,
 })

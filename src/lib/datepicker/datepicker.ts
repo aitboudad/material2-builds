@@ -56,7 +56,7 @@ let datepickerUid = 0;
   moduleId: module.id,
   selector: 'md-datepicker-content',
   templateUrl: 'datepicker-content.html',
-  styleUrls: ['datepicker-content.css'],
+  // styleUrls: ['datepicker-content.css'],
   host: {
     'class': 'mat-datepicker-content',
     '[class.mat-datepicker-content-touch]': 'datepicker.touchUi',

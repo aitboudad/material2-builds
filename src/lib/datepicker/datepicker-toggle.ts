@@ -15,7 +15,7 @@ import {MdDatepickerIntl} from './datepicker-intl';
   moduleId: module.id,
   selector: 'button[mdDatepickerToggle], button[matDatepickerToggle]',
   template: '',
-  styleUrls: ['datepicker-toggle.css'],
+  // styleUrls: ['datepicker-toggle.css'],
   host: {
     'type': 'button',
     'class': 'mat-datepicker-toggle',

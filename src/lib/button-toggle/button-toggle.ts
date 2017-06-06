@@ -265,7 +265,7 @@ export class MdButtonToggleGroupMultiple extends _MdButtonToggleGroupMixinBase
   moduleId: module.id,
   selector: 'md-button-toggle, mat-button-toggle',
   templateUrl: 'button-toggle.html',
-  styleUrls: ['button-toggle.css'],
+  // styleUrls: ['button-toggle.css'],
   encapsulation: ViewEncapsulation.None,
   host: {
     'class': 'mat-button-toggle'

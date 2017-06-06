@@ -33,7 +33,7 @@ export type AutocompletePositionY = 'above' | 'below';
   moduleId: module.id,
   selector: 'md-autocomplete, mat-autocomplete',
   templateUrl: 'autocomplete.html',
-  styleUrls: ['autocomplete.css'],
+  // styleUrls: ['autocomplete.css'],
   encapsulation: ViewEncapsulation.None,
   exportAs: 'mdAutocomplete',
   host: {
