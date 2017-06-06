@@ -48,7 +48,7 @@ export class MdRipple implements OnChanges, OnDestroy {
    */
   // Prevent TS metadata emit from referencing HTMLElement in ripple.js
   // Otherwise running this code in a Node environment (e.g Universal) will not work.
-  @Input('mdRippleTrigger') trigger: HTMLElement|HTMLElement;
+  @Input('mdRippleTrigger') trigger: any;
 
   /**
    * Whether the ripple always originates from the center of the host element's bounds, rather
