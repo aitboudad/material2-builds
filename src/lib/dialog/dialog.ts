@@ -6,7 +6,16 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {Injector, ComponentRef, Injectable, Optional, SkipSelf, TemplateRef} from '@angular/core';
+import {
+  Injector,
+  ComponentRef,
+  Injectable,
+  Optional,
+  SkipSelf,
+  TemplateRef,
+  Inject,
+  InjectionToken,
+} from '@angular/core';
 import {Location} from '@angular/common';
 import {Observable} from 'rxjs/Observable';
 import {Subject} from 'rxjs/Subject';
@@ -16,6 +25,8 @@ import {
   ComponentType,
   OverlayState,
   ComponentPortal,
+  ScrollStrategy,
+  BlockScrollStrategy,
 } from '../core';
 import {extendObject} from '../core/util/object-extend';
 import {ESCAPE} from '../core/keyboard/keycodes';
@@ -24,6 +35,23 @@ import {MdDialogConfig} from './dialog-config';
 import {MdDialogRef} from './dialog-ref';
 import {MdDialogContainer} from './dialog-container';
 import {TemplatePortal} from '../core/portal/portal';
+
+
+/** Injection token that determines the scroll handling while the dialog is open. */
+export const MD_DIALOG_SCROLL_STRATEGY =
+    new InjectionToken<() => ScrollStrategy>('md-dialog-scroll-strategy');
+
+/** @docs-private */
+export function MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY(overlay: Overlay) {
+  return () => overlay.scrollStrategies.block();
+}
+
+/** @docs-private */
+export const MD_DIALOG_SCROLL_STRATEGY_PROVIDER = {
+  provide: MD_DIALOG_SCROLL_STRATEGY,
+  deps: [Overlay],
+  useFactory: MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY,
+};
 
 
 /**
@@ -61,6 +89,7 @@ export class MdDialog {
   constructor(
       private _overlay: Overlay,
       private _injector: Injector,
+      @Inject(MD_DIALOG_SCROLL_STRATEGY) private _scrollStrategy,
       @Optional() private _location: Location,
       @Optional() @SkipSelf() private _parentDialog: MdDialog) {
 
@@ -133,7 +162,7 @@ export class MdDialog {
     let overlayState = new OverlayState();
     overlayState.panelClass = dialogConfig.panelClass;
     overlayState.hasBackdrop = dialogConfig.hasBackdrop;
-    overlayState.scrollStrategy = this._overlay.scrollStrategies.block();
+    overlayState.scrollStrategy = this._scrollStrategy();
     overlayState.direction = dialogConfig.direction;
     if (dialogConfig.backdropClass) {
       overlayState.backdropClass = dialogConfig.backdropClass;

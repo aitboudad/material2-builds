@@ -16,6 +16,8 @@ import {
     Optional,
     Output,
     ViewContainerRef,
+    InjectionToken,
+    Inject,
 } from '@angular/core';
 import {MdMenuPanel} from './menu-panel';
 import {throwMdMenuMissingError} from './menu-errors';
@@ -30,9 +32,28 @@ import {
     ConnectedPositionStrategy,
     HorizontalConnectionPos,
     VerticalConnectionPos,
+    ScrollStrategy,
+    RepositionScrollStrategy,
 } from '../core';
 import {Subscription} from 'rxjs/Subscription';
 import {MenuPositionX, MenuPositionY} from './menu-positions';
+
+/** Injection token that determines the scroll handling while the menu is open. */
+export const MD_MENU_SCROLL_STRATEGY =
+    new InjectionToken<() => ScrollStrategy>('md-menu-scroll-strategy');
+
+/** @docs-private */
+export function MD_MENU_SCROLL_STRATEGY_PROVIDER_FACTORY(overlay: Overlay) {
+  return () => overlay.scrollStrategies.reposition();
+}
+
+/** @docs-private */
+export const MD_MENU_SCROLL_STRATEGY_PROVIDER = {
+  provide: MD_MENU_SCROLL_STRATEGY,
+  deps: [Overlay],
+  useFactory: MD_MENU_SCROLL_STRATEGY_PROVIDER_FACTORY,
+};
+
 
 // TODO(andrewseguin): Remove the kebab versions in favor of camelCased attribute selectors
 
@@ -86,7 +107,8 @@ export class MdMenuTrigger implements AfterViewInit, OnDestroy {
   @Output() onMenuClose = new EventEmitter<void>();
 
   constructor(private _overlay: Overlay, private _element: ElementRef,
-              private _viewContainerRef: ViewContainerRef, @Optional() private _dir: Dir) { }
+              private _viewContainerRef: ViewContainerRef, @Optional() private _dir: Dir,
+              @Inject(MD_MENU_SCROLL_STRATEGY) private _scrollStrategy) { }
 
   ngAfterViewInit() {
     this._checkMenu();
@@ -224,7 +246,7 @@ export class MdMenuTrigger implements AfterViewInit, OnDestroy {
     overlayState.hasBackdrop = true;
     overlayState.backdropClass = 'cdk-overlay-transparent-backdrop';
     overlayState.direction = this.dir;
-    overlayState.scrollStrategy = this._overlay.scrollStrategies.reposition();
+    overlayState.scrollStrategy = this._scrollStrategy();
     return overlayState;
   }
 

@@ -21,12 +21,17 @@ import {
   ViewEncapsulation,
   NgZone,
   Inject,
+  InjectionToken,
 } from '@angular/core';
 import {DOCUMENT} from '@angular/platform-browser';
-import {Overlay} from '../core/overlay/overlay';
-import {OverlayRef} from '../core/overlay/overlay-ref';
+import {
+  Overlay,
+  OverlayRef,
+  OverlayState,
+  ScrollStrategy,
+  RepositionScrollStrategy,
+} from '../core/overlay/index';
 import {ComponentPortal} from '../core/portal/portal';
-import {OverlayState} from '../core/overlay/overlay-state';
 import {Dir} from '../core/rtl/dir';
 import {MdDialog} from '../dialog/dialog';
 import {MdDialogRef} from '../dialog/dialog-ref';
@@ -43,6 +48,22 @@ import 'rxjs/add/operator/first';
 
 /** Used to generate a unique ID for each datepicker instance. */
 let datepickerUid = 0;
+
+/** Injection token that determines the scroll handling while the calendar is open. */
+export const MD_DATEPICKER_SCROLL_STRATEGY =
+    new InjectionToken<() => ScrollStrategy>('md-datepicker-scroll-strategy');
+
+/** @docs-private */
+export function MD_DATEPICKER_SCROLL_STRATEGY_PROVIDER_FACTORY(overlay: Overlay) {
+  return () => overlay.scrollStrategies.reposition();
+}
+
+/** @docs-private */
+export const MD_DATEPICKER_SCROLL_STRATEGY_PROVIDER = {
+  provide: MD_DATEPICKER_SCROLL_STRATEGY,
+  deps: [Overlay],
+  useFactory: MD_DATEPICKER_SCROLL_STRATEGY_PROVIDER_FACTORY,
+};
 
 
 /**
@@ -163,6 +184,7 @@ export class MdDatepicker<D> implements OnDestroy {
               private _overlay: Overlay,
               private _ngZone: NgZone,
               private _viewContainerRef: ViewContainerRef,
+              @Inject(MD_DATEPICKER_SCROLL_STRATEGY) private _scrollStrategy,
               @Optional() private _dateAdapter: DateAdapter<D>,
               @Optional() private _dir: Dir,
               @Optional() @Inject(DOCUMENT) private _document: any) {
@@ -283,7 +305,7 @@ export class MdDatepicker<D> implements OnDestroy {
     overlayState.hasBackdrop = true;
     overlayState.backdropClass = 'md-overlay-transparent-backdrop';
     overlayState.direction = this._dir ? this._dir.value : 'ltr';
-    overlayState.scrollStrategy = this._overlay.scrollStrategies.reposition();
+    overlayState.scrollStrategy = this._scrollStrategy();
 
     this._popupRef = this._overlay.create(overlayState);
   }

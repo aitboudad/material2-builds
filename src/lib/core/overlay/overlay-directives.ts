@@ -20,6 +20,8 @@ import {
     Renderer2,
     OnChanges,
     SimpleChanges,
+    InjectionToken,
+    Inject,
 } from '@angular/core';
 import {Overlay, OVERLAY_PROVIDERS} from './overlay';
 import {OverlayRef} from './overlay-ref';
@@ -32,16 +34,19 @@ import {
 import {PortalModule} from '../portal/portal-directives';
 import {ConnectedPositionStrategy} from './position/connected-position-strategy';
 import {Dir, LayoutDirection} from '../rtl/dir';
-import {Scrollable} from './scroll/scrollable';
-import {ScrollStrategy} from './scroll/scroll-strategy';
 import {coerceBooleanProperty} from '../coercion/boolean-property';
 import {ESCAPE} from '../keyboard/keycodes';
 import {Subscription} from 'rxjs/Subscription';
-import {ScrollDispatchModule} from './scroll/index';
+import {
+    ScrollStrategy,
+    RepositionScrollStrategy,
+    Scrollable,
+    ScrollDispatchModule,
+} from './scroll/index';
 
 
 /** Default set of positions for the overlay. Follows the behavior of a dropdown. */
-let defaultPositionList = [
+const defaultPositionList = [
   new ConnectionPositionPair(
       {originX: 'start', originY: 'bottom'},
       {overlayX: 'start', overlayY: 'top'}),
@@ -49,6 +54,23 @@ let defaultPositionList = [
       {originX: 'start', originY: 'top'},
       {overlayX: 'start', overlayY: 'bottom'}),
 ];
+
+/** Injection token that determines the scroll handling while the connected overlay is open. */
+export const MD_CONNECTED_OVERLAY_SCROLL_STRATEGY =
+    new InjectionToken<() => ScrollStrategy>('md-connected-overlay-scroll-strategy');
+
+/** @docs-private */
+export function MD_CONNECTED_OVERLAY_SCROLL_STRATEGY_PROVIDER_FACTORY(overlay: Overlay) {
+  return () => overlay.scrollStrategies.reposition();
+}
+
+/** @docs-private */
+export const MD_CONNECTED_OVERLAY_SCROLL_STRATEGY_PROVIDER = {
+  provide: MD_CONNECTED_OVERLAY_SCROLL_STRATEGY,
+  deps: [Overlay],
+  useFactory: MD_CONNECTED_OVERLAY_SCROLL_STRATEGY_PROVIDER_FACTORY,
+};
+
 
 
 /**
@@ -131,7 +153,7 @@ export class ConnectedOverlayDirective implements OnDestroy, OnChanges {
   @Input() backdropClass: string;
 
   /** Strategy to be used when handling scroll events while the overlay is open. */
-  @Input() scrollStrategy: ScrollStrategy = this._overlay.scrollStrategies.reposition();
+  @Input() scrollStrategy: ScrollStrategy = this._scrollStrategy();
 
   /** Whether the overlay is open. */
   @Input() open: boolean = false;
@@ -165,7 +187,8 @@ export class ConnectedOverlayDirective implements OnDestroy, OnChanges {
       private _renderer: Renderer2,
       templateRef: TemplateRef<any>,
       viewContainerRef: ViewContainerRef,
-      @Optional() private _dir: Dir) {
+      @Optional() private _dir: Dir,
+      @Inject(MD_CONNECTED_OVERLAY_SCROLL_STRATEGY) private _scrollStrategy) {
     this._templatePortal = new TemplatePortal(templateRef, viewContainerRef);
   }
 
@@ -332,6 +355,6 @@ export class ConnectedOverlayDirective implements OnDestroy, OnChanges {
   imports: [PortalModule, ScrollDispatchModule],
   exports: [ConnectedOverlayDirective, OverlayOrigin, ScrollDispatchModule],
   declarations: [ConnectedOverlayDirective, OverlayOrigin],
-  providers: [OVERLAY_PROVIDERS],
+  providers: [OVERLAY_PROVIDERS, MD_CONNECTED_OVERLAY_SCROLL_STRATEGY_PROVIDER],
 })
 export class OverlayModule {}
