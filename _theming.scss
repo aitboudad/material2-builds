@@ -3735,6 +3735,6 @@ $mat-tooltip-vertical-padding: ($mat-tooltip-target-height - $mat-tooltip-font-s
   @include mat-slider-theme($theme);
   // @include mat-tabs-theme($theme);
   // @include mat-toolbar-theme($theme);
-  // @include mat-tooltip-theme($theme);
+  @include mat-tooltip-theme($theme);
   // @include mat-simple-snack-bar-theme($theme);
 }
