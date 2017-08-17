@@ -5,14 +5,14 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { ElementRef, NgZone, OnDestroy, ViewContainerRef, ChangeDetectorRef, InjectionToken } from '@angular/core';
+import { ChangeDetectorRef, ElementRef, InjectionToken, NgZone, OnDestroy, ViewContainerRef } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
-import { Overlay, RepositionScrollStrategy, ScrollStrategy } from '../core';
-import { MdAutocomplete } from './autocomplete';
+import { Directionality } from '@angular/cdk/bidi';
+import { Overlay, RepositionScrollStrategy, ScrollStrategy } from '@angular/cdk/overlay';
 import { Observable } from 'rxjs/Observable';
-import { MdOptionSelectionChange, MdOption } from '../core/option/option';
-import { Directionality } from '../core/bidi/index';
 import { MdFormField } from '../form-field/index';
+import { MdOption, MdOptionSelectionChange } from '../core/option/option';
+import { MdAutocomplete } from './autocomplete';
 /**
  * The following style constants are necessary to save here in order
  * to properly calculate the scrollTop of the panel. Because we are not
