@@ -14,7 +14,6 @@ export * from './version';
 export * from './core';
 export * from './autocomplete/index';
 export * from './dialog/index';
-export * from './form-field/index';
 export * from './select/index';
 export * from './slider/index';
 export * from './tooltip/index';

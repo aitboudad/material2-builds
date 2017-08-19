@@ -10,7 +10,6 @@ import { ControlValueAccessor } from '@angular/forms';
 import { Directionality } from '@angular/cdk/bidi';
 import { Overlay, RepositionScrollStrategy, ScrollStrategy } from '@angular/cdk/overlay';
 import { Observable } from 'rxjs/Observable';
-import { MdFormField } from '../form-field/index';
 import { MdOption, MdOptionSelectionChange } from '../core/option/option';
 import { MdAutocomplete } from './autocomplete';
 /**
@@ -49,8 +48,8 @@ export declare class MdAutocompleteTrigger implements ControlValueAccessor, OnDe
     private _changeDetectorRef;
     private _scrollStrategy;
     private _dir;
-    private _formField;
     private _document;
+    private _formField;
     private _overlayRef;
     private _portal;
     private _panelOpen;
@@ -67,7 +66,7 @@ export declare class MdAutocompleteTrigger implements ControlValueAccessor, OnDe
     autocomplete: MdAutocomplete;
     /** Property with mat- prefix for no-conflict mode. */
     _matAutocomplete: MdAutocomplete;
-    constructor(_element: ElementRef, _overlay: Overlay, _viewContainerRef: ViewContainerRef, _zone: NgZone, _changeDetectorRef: ChangeDetectorRef, _scrollStrategy: any, _dir: Directionality, _formField: MdFormField, _document: any);
+    constructor(_element: ElementRef, _overlay: Overlay, _viewContainerRef: ViewContainerRef, _zone: NgZone, _changeDetectorRef: ChangeDetectorRef, _scrollStrategy: any, _dir: Directionality, _document: any);
     ngOnDestroy(): void;
     readonly panelOpen: boolean;
     /** Opens the autocomplete suggestion panel. */

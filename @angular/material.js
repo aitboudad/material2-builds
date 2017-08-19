@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Attribute, ChangeDetectionStrategy, ChangeDetectorRef, Component, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, Host, Inject, Injectable, InjectionToken, Injector, Input, LOCALE_ID, NgModule, NgZone, Optional, Output, Renderer2, Self, SkipSelf, TemplateRef, Version, ViewChild, ViewContainerRef, ViewEncapsulation, forwardRef, isDevMode } from '@angular/core';
+import { Attribute, ChangeDetectionStrategy, ChangeDetectorRef, Component, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, Inject, Injectable, InjectionToken, Injector, Input, LOCALE_ID, NgModule, NgZone, Optional, Output, Renderer2, Self, SkipSelf, TemplateRef, Version, ViewChild, ViewContainerRef, ViewEncapsulation, forwardRef, isDevMode } from '@angular/core';
 import { A11yModule, ActiveDescendantKeyManager, FocusKeyManager, FocusTrap, FocusTrapDeprecatedDirective, FocusTrapDirective, FocusTrapFactory, InteractivityChecker, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, LiveAnnouncer, isFakeMousedownFromScreenReader } from '@angular/cdk/a11y';
 import { BidiModule, Dir, Directionality } from '@angular/cdk/bidi';
 import { ObserveContent, ObserversModule } from '@angular/cdk/observers';
@@ -20,10 +20,10 @@ import { Subject } from 'rxjs/Subject';
 import { of } from 'rxjs/observable/of';
 import { FormGroupDirective, NG_VALUE_ACCESSOR, NgControl, NgForm } from '@angular/forms';
 import { RxChain, filter, first, map, startWith, switchMap } from '@angular/cdk/rxjs';
-import { animate, state, style, transition, trigger } from '@angular/animations';
 import { merge } from 'rxjs/observable/merge';
 import { fromEvent } from 'rxjs/observable/fromEvent';
 import { defer } from 'rxjs/observable/defer';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 
 /**
  * Current version of Angular Material.
@@ -2727,485 +2727,6 @@ MdAutocomplete.propDecorators = {
     'displayWith': [{ type: Input },],
 };
 
-let nextUniqueId = 0;
-/**
- * Single error message to be shown underneath the form field.
- */
-class MdError {
-    constructor() {
-        this.id = `mat-error-${nextUniqueId++}`;
-    }
-}
-MdError.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-error, mat-error',
-                host: {
-                    'class': 'mat-error',
-                    'role': 'alert',
-                    '[attr.id]': 'id',
-                }
-            },] },
-];
-/**
- * @nocollapse
- */
-MdError.ctorParameters = () => [];
-MdError.propDecorators = {
-    'id': [{ type: Input },],
-};
-
-/**
- * \@docs-private
- * @return {?}
- */
-function getMdFormFieldPlaceholderConflictError() {
-    return Error('Placeholder attribute and child element were both specified.');
-}
-/**
- * \@docs-private
- * @param {?} align
- * @return {?}
- */
-function getMdFormFieldDuplicatedHintError(align) {
-    return Error(`A hint was already declared for 'align="${align}"'.`);
-}
-/**
- * \@docs-private
- * @return {?}
- */
-function getMdFormFieldMissingControlError() {
-    return Error('md-form-field must contain a MdFormFieldControl. ' +
-        'Did you forget to add mdInput to the native input or textarea element?');
-}
-
-/**
- * An interface which allows a control to work inside of a `MdFormField`.
- * @abstract
- */
-class MdFormFieldControl {
-    /**
-     * Sets the list of element IDs that currently describe this control.
-     * @abstract
-     * @param {?} ids
-     * @return {?}
-     */
-    setDescribedByIds(ids) { }
-    /**
-     * Focuses this control.
-     * @abstract
-     * @return {?}
-     */
-    focus() { }
-}
-
-let nextUniqueId$2 = 0;
-/**
- * Hint text to be shown underneath the form field control.
- */
-class MdHint {
-    constructor() {
-        /**
-         * Whether to align the hint label at the start or end of the line.
-         */
-        this.align = 'start';
-        /**
-         * Unique ID for the hint. Used for the aria-describedby on the form field control.
-         */
-        this.id = `mat-hint-${nextUniqueId$2++}`;
-    }
-}
-MdHint.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-hint, mat-hint',
-                host: {
-                    'class': 'mat-hint',
-                    '[class.mat-right]': 'align == "end"',
-                    '[attr.id]': 'id',
-                    // Remove align attribute to prevent it from interfering with layout.
-                    '[attr.align]': 'null',
-                }
-            },] },
-];
-/**
- * @nocollapse
- */
-MdHint.ctorParameters = () => [];
-MdHint.propDecorators = {
-    'align': [{ type: Input },],
-    'id': [{ type: Input },],
-};
-
-/**
- * The floating placeholder for an `MdFormField`.
- */
-class MdPlaceholder {
-}
-MdPlaceholder.decorators = [
-    { type: Directive, args: [{
-                selector: 'md-placeholder, mat-placeholder'
-            },] },
-];
-/**
- * @nocollapse
- */
-MdPlaceholder.ctorParameters = () => [];
-
-/**
- * Prefix to be placed the the front of the form field.
- */
-class MdPrefix {
-}
-MdPrefix.decorators = [
-    { type: Directive, args: [{
-                selector: '[mdPrefix], [matPrefix]',
-            },] },
-];
-/**
- * @nocollapse
- */
-MdPrefix.ctorParameters = () => [];
-
-/**
- * Suffix to be placed at the end of the form field.
- */
-class MdSuffix {
-}
-MdSuffix.decorators = [
-    { type: Directive, args: [{
-                selector: '[mdSuffix], [matSuffix]',
-            },] },
-];
-/**
- * @nocollapse
- */
-MdSuffix.ctorParameters = () => [];
-
-let nextUniqueId$1 = 0;
-/**
- * Container for form controls that applies Material Design styling and behavior.
- */
-class MdFormField {
-    /**
-     * @param {?} _elementRef
-     * @param {?} _changeDetectorRef
-     * @param {?} placeholderOptions
-     */
-    constructor(_elementRef, _changeDetectorRef, placeholderOptions) {
-        this._elementRef = _elementRef;
-        this._changeDetectorRef = _changeDetectorRef;
-        /**
-         * Color of the form field underline, based on the theme.
-         */
-        this.color = 'primary';
-        /**
-         * State of the md-hint and md-error animations.
-         */
-        this._subscriptAnimationState = '';
-        this._hintLabel = '';
-        // Unique id for the hint label.
-        this._hintLabelId = `md-hint-${nextUniqueId$1++}`;
-        this._placeholderOptions = placeholderOptions ? placeholderOptions : {};
-        this.floatPlaceholder = this._placeholderOptions.float || 'auto';
-    }
-    /**
-     * @deprecated Use `color` instead.
-     * @return {?}
-     */
-    get dividerColor() { return this.color; }
-    /**
-     * @param {?} value
-     * @return {?}
-     */
-    set dividerColor(value) { this.color = value; }
-    /**
-     * Whether the required marker should be hidden.
-     * @return {?}
-     */
-    get hideRequiredMarker() { return this._hideRequiredMarker; }
-    /**
-     * @param {?} value
-     * @return {?}
-     */
-    set hideRequiredMarker(value) {
-        this._hideRequiredMarker = coerceBooleanProperty(value);
-    }
-    /**
-     * Whether the floating label should always float or not.
-     * @return {?}
-     */
-    get _shouldAlwaysFloat() { return this._floatPlaceholder === 'always'; }
-    /**
-     * Whether the placeholder can float or not.
-     * @return {?}
-     */
-    get _canPlaceholderFloat() { return this._floatPlaceholder !== 'never'; }
-    /**
-     * Text for the form field hint.
-     * @return {?}
-     */
-    get hintLabel() { return this._hintLabel; }
-    /**
-     * @param {?} value
-     * @return {?}
-     */
-    set hintLabel(value) {
-        this._hintLabel = value;
-        this._processHints();
-    }
-    /**
-     * Whether the placeholder should always float, never float or float as the user types.
-     * @return {?}
-     */
-    get floatPlaceholder() { return this._floatPlaceholder; }
-    /**
-     * @param {?} value
-     * @return {?}
-     */
-    set floatPlaceholder(value) {
-        if (value !== this._floatPlaceholder) {
-            this._floatPlaceholder = value || this._placeholderOptions.float || 'auto';
-            this._changeDetectorRef.markForCheck();
-        }
-    }
-    /**
-     * @return {?}
-     */
-    ngAfterContentInit() {
-        this._validateControlChild();
-        // Subscribe to changes in the child control state in order to update the form field UI.
-        startWith.call(this._control.stateChanges, null).subscribe(() => {
-            this._validatePlaceholders();
-            this._syncDescribedByIds();
-            this._changeDetectorRef.markForCheck();
-        });
-        let /** @type {?} */ ngControl = this._control.ngControl;
-        if (ngControl && ngControl.valueChanges) {
-            ngControl.valueChanges.subscribe(() => {
-                this._changeDetectorRef.markForCheck();
-            });
-        }
-        // Re-validate when the number of hints changes.
-        startWith.call(this._hintChildren.changes, null).subscribe(() => {
-            this._processHints();
-            this._changeDetectorRef.markForCheck();
-        });
-        // Update the aria-described by when the number of errors changes.
-        startWith.call(this._errorChildren.changes, null).subscribe(() => {
-            this._syncDescribedByIds();
-            this._changeDetectorRef.markForCheck();
-        });
-    }
-    /**
-     * @return {?}
-     */
-    ngAfterContentChecked() {
-        this._validateControlChild();
-    }
-    /**
-     * @return {?}
-     */
-    ngAfterViewInit() {
-        // Avoid animations on load.
-        this._subscriptAnimationState = 'enter';
-        this._changeDetectorRef.detectChanges();
-    }
-    /**
-     * Determines whether a class from the NgControl should be forwarded to the host element.
-     * @param {?} prop
-     * @return {?}
-     */
-    _shouldForward(prop) {
-        let /** @type {?} */ ngControl = this._control ? this._control.ngControl : null;
-        return ngControl && ((ngControl))[prop];
-    }
-    /**
-     * Whether the form field has a placeholder.
-     * @return {?}
-     */
-    _hasPlaceholder() {
-        return !!(this._control.placeholder || this._placeholderChild);
-    }
-    /**
-     * Determines whether to display hints or errors.
-     * @return {?}
-     */
-    _getDisplayedMessages() {
-        return (this._errorChildren && this._errorChildren.length > 0 &&
-            this._control.errorState) ? 'error' : 'hint';
-    }
-    /**
-     * Ensure that there is only one placeholder (either `placeholder` attribute on the child control
-     * or child element with the `md-placeholder` directive).
-     * @return {?}
-     */
-    _validatePlaceholders() {
-        if (this._control.placeholder && this._placeholderChild) {
-            throw getMdFormFieldPlaceholderConflictError();
-        }
-    }
-    /**
-     * Does any extra processing that is required when handling the hints.
-     * @return {?}
-     */
-    _processHints() {
-        this._validateHints();
-        this._syncDescribedByIds();
-    }
-    /**
-     * Ensure that there is a maximum of one of each `<md-hint>` alignment specified, with the
-     * attribute being considered as `align="start"`.
-     * @return {?}
-     */
-    _validateHints() {
-        if (this._hintChildren) {
-            let /** @type {?} */ startHint;
-            let /** @type {?} */ endHint;
-            this._hintChildren.forEach((hint) => {
-                if (hint.align == 'start') {
-                    if (startHint || this.hintLabel) {
-                        throw getMdFormFieldDuplicatedHintError('start');
-                    }
-                    startHint = hint;
-                }
-                else if (hint.align == 'end') {
-                    if (endHint) {
-                        throw getMdFormFieldDuplicatedHintError('end');
-                    }
-                    endHint = hint;
-                }
-            });
-        }
-    }
-    /**
-     * Sets the list of element IDs that describe the child control. This allows the control to update
-     * its `aria-describedby` attribute accordingly.
-     * @return {?}
-     */
-    _syncDescribedByIds() {
-        if (this._control) {
-            let /** @type {?} */ ids = [];
-            if (this._getDisplayedMessages() === 'hint') {
-                let /** @type {?} */ startHint = this._hintChildren ?
-                    this._hintChildren.find(hint => hint.align === 'start') : null;
-                let /** @type {?} */ endHint = this._hintChildren ?
-                    this._hintChildren.find(hint => hint.align === 'end') : null;
-                if (startHint) {
-                    ids.push(startHint.id);
-                }
-                else if (this._hintLabel) {
-                    ids.push(this._hintLabelId);
-                }
-                if (endHint) {
-                    ids.push(endHint.id);
-                }
-            }
-            else if (this._errorChildren) {
-                ids = this._errorChildren.map(mdError => mdError.id);
-            }
-            this._control.setDescribedByIds(ids);
-        }
-    }
-    /**
-     * Throws an error if the form field's control is missing.
-     * @return {?}
-     */
-    _validateControlChild() {
-        if (!this._control) {
-            throw getMdFormFieldMissingControlError();
-        }
-    }
-}
-MdFormField.decorators = [
-    { type: Component, args: [{// TODO(mmalerba): the input-container selectors and classes are deprecated and will be removed.
-                selector: 'md-input-container, mat-input-container, md-form-field, mat-form-field',
-                template: "<div class=\"mat-input-wrapper mat-form-field-wrapper\"><div class=\"mat-input-flex mat-form-field-flex\" #connectionContainer><div class=\"mat-input-prefix mat-form-field-prefix\" *ngIf=\"_prefixChildren.length\"><ng-content select=\"[mdPrefix], [matPrefix]\"></ng-content></div><div class=\"mat-input-infix mat-form-field-infix\"><ng-content></ng-content><span class=\"mat-input-placeholder-wrapper mat-form-field-placeholder-wrapper\"><label class=\"mat-input-placeholder mat-form-field-placeholder\" [attr.for]=\"_control.id\" [class.mat-empty]=\"_control.empty && !_shouldAlwaysFloat\" [class.mat-form-field-empty]=\"_control.empty && !_shouldAlwaysFloat\" [class.mat-float]=\"_canPlaceholderFloat\" [class.mat-form-field-float]=\"_canPlaceholderFloat\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\" *ngIf=\"_hasPlaceholder()\"><ng-content select=\"md-placeholder, mat-placeholder\"></ng-content>{{_control.placeholder}} <span class=\"mat-placeholder-required mat-form-field-required-marker\" aria-hidden=\"true\" *ngIf=\"!hideRequiredMarker && _control.required\">*</span></label></span></div><div class=\"mat-input-suffix mat-form-field-suffix\" *ngIf=\"_suffixChildren.length\"><ng-content select=\"[mdSuffix], [matSuffix]\"></ng-content></div></div><div class=\"mat-input-underline mat-form-field-underline\" #underline [class.mat-disabled]=\"_control.disabled\"><span class=\"mat-input-ripple mat-form-field-ripple\" [class.mat-accent]=\"color == 'accent'\" [class.mat-warn]=\"color == 'warn'\"></span></div><div class=\"mat-input-subscript-wrapper mat-form-field-subscript-wrapper\" [ngSwitch]=\"_getDisplayedMessages()\"><div *ngSwitchCase=\"'error'\" [@transitionMessages]=\"_subscriptAnimationState\"><ng-content select=\"md-error, mat-error\"></ng-content></div><div class=\"mat-input-hint-wrapper mat-form-field-hint-wrapper\" *ngSwitchCase=\"'hint'\" [@transitionMessages]=\"_subscriptAnimationState\"><div *ngIf=\"hintLabel\" [id]=\"_hintLabelId\" class=\"mat-hint\">{{hintLabel}}</div><ng-content select=\"md-hint:not([align='end']), mat-hint:not([align='end'])\"></ng-content><div class=\"mat-input-hint-spacer mat-form-field-hint-spacer\"></div><ng-content select=\"md-hint[align='end'], mat-hint[align='end']\"></ng-content></div></div></div>",
-                // MdInput is a directive and can't have styles, so we need to include its styles here.
-                // The MdInput styles are fairly minimal so it shouldn't be a big deal for people who aren't using
-                // MdInput.
-                styles: [".mat-form-field{display:inline-block;position:relative;width:200px;text-align:left}[dir=rtl] .mat-form-field{text-align:right}.mat-form-field-wrapper{position:relative}.mat-form-field-flex{display:inline-flex;align-items:baseline;width:100%}.mat-form-field-prefix,.mat-form-field-suffix{white-space:nowrap;flex:none}.mat-form-field-prefix .mat-icon,.mat-form-field-suffix .mat-icon{width:1em}.mat-form-field-prefix .mat-icon-button,.mat-form-field-suffix .mat-icon-button{font:inherit;vertical-align:baseline}.mat-form-field-prefix .mat-icon-button .mat-icon,.mat-form-field-suffix .mat-icon-button .mat-icon{font-size:inherit}.mat-form-field-infix{display:block;position:relative;flex:auto}.mat-form-field-autofill-float:-webkit-autofill+.mat-form-field-placeholder-wrapper .mat-form-field-placeholder{display:none}.mat-form-field-autofill-float:-webkit-autofill+.mat-form-field-placeholder-wrapper .mat-form-field-float{display:block;transition:none}.mat-form-field-placeholder-wrapper{position:absolute;left:0;box-sizing:content-box;width:100%;height:100%;overflow:hidden;pointer-events:none}.mat-form-field-placeholder{position:absolute;left:0;font:inherit;pointer-events:none;width:100%;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;transform:perspective(100px);-ms-transform:none;transform-origin:0 0;transition:transform .4s cubic-bezier(.25,.8,.25,1),color .4s cubic-bezier(.25,.8,.25,1),width .4s cubic-bezier(.25,.8,.25,1);display:none}.mat-focused .mat-form-field-placeholder.mat-form-field-float,.mat-form-field-placeholder.mat-form-field-empty,.mat-form-field-placeholder.mat-form-field-float:not(.mat-form-field-empty){display:block}[dir=rtl] .mat-form-field-placeholder{transform-origin:100% 0;left:auto;right:0}.mat-form-field-placeholder:not(.mat-form-field-empty){transition:none}.mat-form-field-underline{position:absolute;height:1px;width:100%}.mat-form-field-underline.mat-disabled{background-position:0;background-color:transparent}.mat-form-field-underline .mat-form-field-ripple{position:absolute;height:1px;top:0;left:0;width:100%;transform-origin:50%;transform:scaleX(.5);visibility:hidden;transition:background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-focused .mat-form-field-underline .mat-form-field-ripple{height:2px}.mat-focused .mat-form-field-underline .mat-form-field-ripple,.mat-form-field-invalid .mat-form-field-underline .mat-form-field-ripple{visibility:visible;transform:scaleX(1);transition:transform 150ms linear,background-color .3s cubic-bezier(.55,0,.55,.2)}.mat-form-field-subscript-wrapper{position:absolute;width:100%;overflow:hidden}.mat-form-field-placeholder-wrapper .mat-icon,.mat-form-field-subscript-wrapper .mat-icon{width:1em;height:1em;font-size:inherit;vertical-align:baseline}.mat-form-field-hint-wrapper{display:flex}.mat-form-field-hint-spacer{flex:1 0 1em}.mat-error{display:block} .mat-input-element{font:inherit;background:0 0;color:currentColor;border:none;outline:0;padding:0;margin:0;width:100%;max-width:100%;resize:vertical;vertical-align:bottom}.mat-input-element:-moz-ui-invalid{box-shadow:none}.mat-input-element::placeholder{color:transparent!important}.mat-input-element::-moz-placeholder{color:transparent!important}.mat-input-element::-webkit-input-placeholder{color:transparent!important}.mat-input-element:-ms-input-placeholder{color:transparent!important}textarea.mat-input-element{overflow:auto}"],
-                animations: [
-                    // TODO(mmalerba): Use angular animations for placeholder animation as well.
-                    trigger('transitionMessages', [
-                        state('enter', style({ opacity: 1, transform: 'translateY(0%)' })),
-                        transition('void => enter', [
-                            style({ opacity: 0, transform: 'translateY(-100%)' }),
-                            animate('300ms cubic-bezier(0.55, 0, 0.55, 0.2)'),
-                        ]),
-                    ]),
-                ],
-                host: {
-                    'class': 'mat-input-container mat-form-field',
-                    '[class.mat-input-invalid]': '_control.errorState',
-                    '[class.mat-form-field-invalid]': '_control.errorState',
-                    '[class.mat-focused]': '_control.focused',
-                    '[class.ng-untouched]': '_shouldForward("untouched")',
-                    '[class.ng-touched]': '_shouldForward("touched")',
-                    '[class.ng-pristine]': '_shouldForward("pristine")',
-                    '[class.ng-dirty]': '_shouldForward("dirty")',
-                    '[class.ng-valid]': '_shouldForward("valid")',
-                    '[class.ng-invalid]': '_shouldForward("invalid")',
-                    '[class.ng-pending]': '_shouldForward("pending")',
-                    '(click)': '_control.focus()',
-                },
-                encapsulation: ViewEncapsulation.None,
-                changeDetection: ChangeDetectionStrategy.OnPush,
-            },] },
-];
-/**
- * @nocollapse
- */
-MdFormField.ctorParameters = () => [
-    { type: ElementRef, },
-    { type: ChangeDetectorRef, },
-    { type: undefined, decorators: [{ type: Optional }, { type: Inject, args: [MD_PLACEHOLDER_GLOBAL_OPTIONS,] },] },
-];
-MdFormField.propDecorators = {
-    'color': [{ type: Input },],
-    'dividerColor': [{ type: Input },],
-    'hideRequiredMarker': [{ type: Input },],
-    'hintLabel': [{ type: Input },],
-    'floatPlaceholder': [{ type: Input },],
-    'underlineRef': [{ type: ViewChild, args: ['underline',] },],
-    '_connectionContainerRef': [{ type: ViewChild, args: ['connectionContainer',] },],
-    '_control': [{ type: ContentChild, args: [MdFormFieldControl,] },],
-    '_placeholderChild': [{ type: ContentChild, args: [MdPlaceholder,] },],
-    '_errorChildren': [{ type: ContentChildren, args: [MdError,] },],
-    '_hintChildren': [{ type: ContentChildren, args: [MdHint,] },],
-    '_prefixChildren': [{ type: ContentChildren, args: [MdPrefix,] },],
-    '_suffixChildren': [{ type: ContentChildren, args: [MdSuffix,] },],
-};
-
-class MdFormFieldModule {
-}
-MdFormFieldModule.decorators = [
-    { type: NgModule, args: [{
-                declarations: [
-                    MdError,
-                    MdHint,
-                    MdFormField,
-                    MdPlaceholder,
-                    MdPrefix,
-                    MdSuffix,
-                ],
-                imports: [
-                    CommonModule,
-                    PlatformModule,
-                ],
-                exports: [
-                    MdError,
-                    MdHint,
-                    MdFormField,
-                    MdPlaceholder,
-                    MdPrefix,
-                    MdSuffix,
-                ],
-            },] },
-];
-/**
- * @nocollapse
- */
-MdFormFieldModule.ctorParameters = () => [];
-
 /**
  * The height of each autocomplete option.
  */
@@ -3261,10 +2782,9 @@ class MdAutocompleteTrigger {
      * @param {?} _changeDetectorRef
      * @param {?} _scrollStrategy
      * @param {?} _dir
-     * @param {?} _formField
      * @param {?} _document
      */
-    constructor(_element, _overlay, _viewContainerRef, _zone, _changeDetectorRef, _scrollStrategy, _dir, _formField, _document) {
+    constructor(_element, _overlay, _viewContainerRef, _zone, _changeDetectorRef, _scrollStrategy, _dir, _document) {
         this._element = _element;
         this._overlay = _overlay;
         this._viewContainerRef = _viewContainerRef;
@@ -3272,7 +2792,6 @@ class MdAutocompleteTrigger {
         this._changeDetectorRef = _changeDetectorRef;
         this._scrollStrategy = _scrollStrategy;
         this._dir = _dir;
-        this._formField = _formField;
         this._document = _document;
         this._panelOpen = false;
         /**
@@ -3677,7 +3196,6 @@ MdAutocompleteTrigger.ctorParameters = () => [
     { type: ChangeDetectorRef, },
     { type: undefined, decorators: [{ type: Inject, args: [MD_AUTOCOMPLETE_SCROLL_STRATEGY,] },] },
     { type: Directionality, decorators: [{ type: Optional },] },
-    { type: MdFormField, decorators: [{ type: Optional }, { type: Host },] },
     { type: undefined, decorators: [{ type: Optional }, { type: Inject, args: [DOCUMENT,] },] },
 ];
 MdAutocompleteTrigger.propDecorators = {
@@ -3943,10 +3461,7 @@ class MdDialogContainer extends BasePortalHost {
             throwMdDialogContentAlreadyAttachedError();
         }
         this._savePreviouslyFocusedElement();
-        const /** @type {?} */ componentRef = this._portalHost.attachComponentPortal(portal);
-        // Ensure that the initial view change are picked up.
-        componentRef.changeDetectorRef.markForCheck();
-        return componentRef;
+        return this._portalHost.attachComponentPortal(portal);
     }
     /**
      * Attach a TemplatePortal as content to this dialog container.
@@ -3958,9 +3473,7 @@ class MdDialogContainer extends BasePortalHost {
             throwMdDialogContentAlreadyAttachedError();
         }
         this._savePreviouslyFocusedElement();
-        const /** @type {?} */ locals = this._portalHost.attachTemplatePortal(portal);
-        this._changeDetectorRef.markForCheck();
-        return locals;
+        return this._portalHost.attachTemplatePortal(portal);
     }
     /**
      * Moves the focus inside the focus trap.
@@ -4038,7 +3551,6 @@ MdDialogContainer.decorators = [
                 template: "<ng-template cdkPortalHost></ng-template>",
                 styles: [".mat-dialog-container{box-shadow:0 11px 15px -7px rgba(0,0,0,.2),0 24px 38px 3px rgba(0,0,0,.14),0 9px 46px 8px rgba(0,0,0,.12);display:block;padding:24px;border-radius:2px;box-sizing:border-box;overflow:auto;max-width:80vw;width:100%;height:100%}@media screen and (-ms-high-contrast:active){.mat-dialog-container{outline:solid 1px}}.mat-dialog-content{display:block;margin:0 -24px;padding:0 24px;max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch}.mat-dialog-title{margin:0 0 20px;display:block}.mat-dialog-actions{padding:12px 0;display:flex;flex-wrap:wrap}.mat-dialog-actions:last-child{margin-bottom:-24px}.mat-dialog-actions[align=end]{justify-content:flex-end}.mat-dialog-actions[align=center]{justify-content:center}.mat-dialog-actions .mat-button+.mat-button,.mat-dialog-actions .mat-button+.mat-raised-button,.mat-dialog-actions .mat-raised-button+.mat-button,.mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:8px}[dir=rtl] .mat-dialog-actions .mat-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-button+.mat-raised-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:0;margin-right:8px}"],
                 encapsulation: ViewEncapsulation.None,
-                changeDetection: ChangeDetectionStrategy.OnPush,
                 animations: [
                     trigger('slideDialog', [
                         // Note: The `enter` animation doesn't transition to something like `translate3d(0, 0, 0)
@@ -7314,5 +6826,5 @@ MdTooltipModule.ctorParameters = () => [];
  * Generated bundle index. Do not edit.
  */
 
-export { VERSION, coerceBooleanProperty, coerceNumberProperty, ObserversModule, ObserveContent, Dir, Directionality, BidiModule, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MATERIAL_SANITY_CHECKS, MD_PLACEHOLDER_GLOBAL_OPTIONS, MD_ERROR_GLOBAL_OPTIONS, defaultErrorStateMatcher, showOnDirtyErrorStateMatcher, MdCoreModule, MdOptionModule, MdOptionSelectionChange, MdOption, MdOptgroupBase, _MdOptgroupMixinBase, MdOptgroup, PlatformModule, Platform, getSupportedInputTypes, OVERLAY_PROVIDERS, OverlayModule, Overlay, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, VIEWPORT_RULER_PROVIDER, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, ScrollStrategyOptions, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, A, Z, MATERIAL_COMPATIBILITY_MODE, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_SCROLL_STRATEGY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER, MD_AUTOCOMPLETE_VALUE_ACCESSOR, getMdAutocompleteMissingPanelError, MdAutocompleteTrigger, MdDialogModule, MD_DIALOG_DATA, MD_DIALOG_SCROLL_STRATEGY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER, MdDialog, throwMdDialogContentAlreadyAttachedError, MdDialogContainer, MdDialogClose, MdDialogTitle, MdDialogContent, MdDialogActions, MdDialogConfig, MdDialogRef, MdFormFieldModule, MdError, MdFormField, MdFormFieldControl, getMdFormFieldPlaceholderConflictError, getMdFormFieldDuplicatedHintError, getMdFormFieldMissingControlError, MdHint, MdPlaceholder, MdPrefix, MdSuffix, MdSelectModule, fadeInContent, transformPanel, transformPlaceholder, SELECT_ITEM_HEIGHT, SELECT_PANEL_MAX_HEIGHT, SELECT_MAX_OPTIONS_DISPLAYED, SELECT_TRIGGER_HEIGHT, SELECT_OPTION_HEIGHT_ADJUSTMENT, SELECT_PANEL_PADDING_X, SELECT_PANEL_INDENT_PADDING_X, SELECT_MULTIPLE_PANEL_PADDING_X, SELECT_PANEL_PADDING_Y, SELECT_PANEL_VIEWPORT_PADDING, MD_SELECT_SCROLL_STRATEGY, MD_SELECT_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_SELECT_SCROLL_STRATEGY_PROVIDER, MdSelectChange, MdSelectBase, _MdSelectMixinBase, MdSelectTrigger, MdSelect, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, TOOLTIP_PANEL_CLASS, getMdTooltipInvalidPositionError, MD_TOOLTIP_SCROLL_STRATEGY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER, MdTooltip, TooltipComponent, mixinColor as ɵd, mixinDisabled as ɵc, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵb, RippleRenderer as ɵa };
+export { VERSION, coerceBooleanProperty, coerceNumberProperty, ObserversModule, ObserveContent, Dir, Directionality, BidiModule, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MATERIAL_SANITY_CHECKS, MD_PLACEHOLDER_GLOBAL_OPTIONS, MD_ERROR_GLOBAL_OPTIONS, defaultErrorStateMatcher, showOnDirtyErrorStateMatcher, MdCoreModule, MdOptionModule, MdOptionSelectionChange, MdOption, MdOptgroupBase, _MdOptgroupMixinBase, MdOptgroup, PlatformModule, Platform, getSupportedInputTypes, OVERLAY_PROVIDERS, OverlayModule, Overlay, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, VIEWPORT_RULER_PROVIDER, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, ScrollStrategyOptions, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, A, Z, MATERIAL_COMPATIBILITY_MODE, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_SCROLL_STRATEGY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER, MD_AUTOCOMPLETE_VALUE_ACCESSOR, getMdAutocompleteMissingPanelError, MdAutocompleteTrigger, MdDialogModule, MD_DIALOG_DATA, MD_DIALOG_SCROLL_STRATEGY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER, MdDialog, throwMdDialogContentAlreadyAttachedError, MdDialogContainer, MdDialogClose, MdDialogTitle, MdDialogContent, MdDialogActions, MdDialogConfig, MdDialogRef, MdSelectModule, fadeInContent, transformPanel, transformPlaceholder, SELECT_ITEM_HEIGHT, SELECT_PANEL_MAX_HEIGHT, SELECT_MAX_OPTIONS_DISPLAYED, SELECT_TRIGGER_HEIGHT, SELECT_OPTION_HEIGHT_ADJUSTMENT, SELECT_PANEL_PADDING_X, SELECT_PANEL_INDENT_PADDING_X, SELECT_MULTIPLE_PANEL_PADDING_X, SELECT_PANEL_PADDING_Y, SELECT_PANEL_VIEWPORT_PADDING, MD_SELECT_SCROLL_STRATEGY, MD_SELECT_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_SELECT_SCROLL_STRATEGY_PROVIDER, MdSelectChange, MdSelectBase, _MdSelectMixinBase, MdSelectTrigger, MdSelect, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, TOOLTIP_PANEL_CLASS, getMdTooltipInvalidPositionError, MD_TOOLTIP_SCROLL_STRATEGY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER, MdTooltip, TooltipComponent, mixinColor as ɵd, mixinDisabled as ɵc, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵb, RippleRenderer as ɵa };
 //# sourceMappingURL=material.js.map
