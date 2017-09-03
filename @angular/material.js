@@ -9,13 +9,15 @@ import { Attribute, ChangeDetectionStrategy, ChangeDetectorRef, Component, Conte
 import { A11yModule, ActiveDescendantKeyManager, FocusKeyManager, FocusTrap, FocusTrapDeprecatedDirective, FocusTrapDirective, FocusTrapFactory, InteractivityChecker, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, LiveAnnouncer, isFakeMousedownFromScreenReader } from '@angular/cdk/a11y';
 import { BidiModule, Dir, Directionality } from '@angular/cdk/bidi';
 import { ObserveContent, ObserversModule } from '@angular/cdk/observers';
-import { BlockScrollStrategy, CloseScrollStrategy, ConnectedOverlayDirective, ConnectedOverlayPositionChange, ConnectedPositionStrategy, ConnectionPositionPair, FullscreenOverlayContainer, GlobalPositionStrategy, NoopScrollStrategy, OVERLAY_PROVIDERS, Overlay, OverlayContainer, OverlayModule, OverlayOrigin, OverlayRef, OverlayState, RepositionScrollStrategy, ScrollDispatchModule, ScrollDispatcher, ScrollStrategyOptions, Scrollable, ScrollableViewProperties, VIEWPORT_RULER_PROVIDER, ViewportRuler } from '@angular/cdk/overlay';
+import { BlockScrollStrategy, CloseScrollStrategy, ConnectedOverlayDirective, ConnectedOverlayPositionChange, ConnectedPositionStrategy, ConnectionPositionPair, FullscreenOverlayContainer, GlobalPositionStrategy, NoopScrollStrategy, OVERLAY_PROVIDERS, Overlay, OverlayContainer, OverlayModule, OverlayOrigin, OverlayRef, OverlayState, RepositionScrollStrategy, ScrollDispatcher, ScrollStrategyOptions, Scrollable, ScrollingVisibility, VIEWPORT_RULER_PROVIDER, ViewportRuler } from '@angular/cdk/overlay';
 import { BasePortalHost, ComponentPortal, DomPortalHost, Portal, PortalHostDirective, PortalModule, TemplatePortal, TemplatePortalDirective } from '@angular/cdk/portal';
 import { DOCUMENT, HAMMER_GESTURE_CONFIG, HammerGestureConfig } from '@angular/platform-browser';
 import { CommonModule, Location } from '@angular/common';
+import { ScrollDispatchModule, ScrollDispatcher as ScrollDispatcher$1, VIEWPORT_RULER_PROVIDER as VIEWPORT_RULER_PROVIDER$1, ViewportRuler as ViewportRuler$1 } from '@angular/cdk/scrolling';
 import { Platform, PlatformModule, getSupportedInputTypes } from '@angular/cdk/platform';
 import { A, BACKSPACE, DELETE, DOWN_ARROW, END, ENTER, ESCAPE, HOME, LEFT_ARROW, PAGE_DOWN, PAGE_UP, RIGHT_ARROW, SPACE, TAB, UP_ARROW, Z } from '@angular/cdk/keycodes';
 import { coerceBooleanProperty, coerceNumberProperty } from '@angular/cdk/coercion';
+import { SelectionModel } from '@angular/cdk/collections';
 import { Subject } from 'rxjs/Subject';
 import { of } from 'rxjs/observable/of';
 import { FormGroupDirective, NG_VALUE_ACCESSOR, NgControl, NgForm } from '@angular/forms';
@@ -28,7 +30,7 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 /**
  * Current version of Angular Material.
  */
-const VERSION = new Version('2.0.0-beta.8');
+const VERSION = new Version('2.0.0-beta.10');
 
 const MATERIAL_COMPATIBILITY_MODE = new InjectionToken('md-compatibility-mode');
 /**
@@ -858,7 +860,7 @@ MdRipple.decorators = [
 MdRipple.ctorParameters = () => [
     { type: ElementRef, },
     { type: NgZone, },
-    { type: ViewportRuler, },
+    { type: ViewportRuler$1, },
     { type: Platform, },
     { type: undefined, decorators: [{ type: Optional }, { type: Inject, args: [MD_RIPPLE_GLOBAL_OPTIONS,] },] },
 ];
@@ -886,7 +888,7 @@ MdRippleModule.decorators = [
                 imports: [MdCommonModule, PlatformModule, ScrollDispatchModule],
                 exports: [MdRipple, MdCommonModule],
                 declarations: [MdRipple],
-                providers: [VIEWPORT_RULER_PROVIDER],
+                providers: [VIEWPORT_RULER_PROVIDER$1],
             },] },
 ];
 /**
@@ -942,9 +944,9 @@ MdPseudoCheckbox.propDecorators = {
     'disabled': [{ type: Input },],
 };
 
-class MdSelectionModule {
+class MdPseudoCheckboxModule {
 }
-MdSelectionModule.decorators = [
+MdPseudoCheckboxModule.decorators = [
     { type: NgModule, args: [{
                 exports: [MdPseudoCheckbox],
                 declarations: [MdPseudoCheckbox]
@@ -953,7 +955,7 @@ MdSelectionModule.decorators = [
 /**
  * @nocollapse
  */
-MdSelectionModule.ctorParameters = () => [];
+MdPseudoCheckboxModule.ctorParameters = () => [];
 
 /**
  * Mixin to augment a directive with a `disabled` property.
@@ -1244,6 +1246,27 @@ class MdOption {
     _emitSelectionChangeEvent(isUserInput = false) {
         this.onSelectionChange.emit(new MdOptionSelectionChange(this, isUserInput));
     }
+    /**
+     * Counts the amount of option group labels that precede the specified option.
+     * @param {?} optionIndex Index of the option at which to start counting.
+     * @param {?} options Flat list of all of the options.
+     * @param {?} optionGroups Flat list of all of the option groups.
+     * @return {?}
+     */
+    static countGroupLabelsBeforeOption(optionIndex, options, optionGroups) {
+        if (optionGroups.length) {
+            let /** @type {?} */ optionsArray = options.toArray();
+            let /** @type {?} */ groups = optionGroups.toArray();
+            let /** @type {?} */ groupCounter = 0;
+            for (let /** @type {?} */ i = 0; i < optionIndex + 1; i++) {
+                if (optionsArray[i].group && optionsArray[i].group === groups[groupCounter]) {
+                    groupCounter++;
+                }
+            }
+            return groupCounter;
+        }
+        return 0;
+    }
 }
 MdOption.decorators = [
     { type: Component, args: [{selector: 'md-option, mat-option',
@@ -1285,7 +1308,7 @@ class MdOptionModule {
 }
 MdOptionModule.decorators = [
     { type: NgModule, args: [{
-                imports: [MdRippleModule, CommonModule, MdSelectionModule],
+                imports: [MdRippleModule, CommonModule, MdPseudoCheckboxModule],
                 exports: [MdOption, MdOptgroup],
                 declarations: [MdOption, MdOptgroup]
             },] },
@@ -1364,191 +1387,6 @@ GestureConfig.decorators = [
  * @nocollapse
  */
 GestureConfig.ctorParameters = () => [];
-
-/**
- * Class to be used to power selecting one or more options from a list.
- * \@docs-private
- */
-class SelectionModel {
-    /**
-     * @param {?=} _isMulti
-     * @param {?=} initiallySelectedValues
-     * @param {?=} _emitChanges
-     */
-    constructor(_isMulti = false, initiallySelectedValues, _emitChanges = true) {
-        this._isMulti = _isMulti;
-        this._emitChanges = _emitChanges;
-        /**
-         * Currently-selected values.
-         */
-        this._selection = new Set();
-        /**
-         * Keeps track of the deselected options that haven't been emitted by the change event.
-         */
-        this._deselectedToEmit = [];
-        /**
-         * Keeps track of the selected option that haven't been emitted by the change event.
-         */
-        this._selectedToEmit = [];
-        /**
-         * Event emitted when the value has changed.
-         */
-        this.onChange = this._emitChanges ? new Subject() : null;
-        if (initiallySelectedValues) {
-            if (_isMulti) {
-                initiallySelectedValues.forEach(value => this._markSelected(value));
-            }
-            else {
-                this._markSelected(initiallySelectedValues[0]);
-            }
-            // Clear the array in order to avoid firing the change event for preselected values.
-            this._selectedToEmit.length = 0;
-        }
-    }
-    /**
-     * Selected value(s).
-     * @return {?}
-     */
-    get selected() {
-        if (!this._selected) {
-            this._selected = Array.from(this._selection.values());
-        }
-        return this._selected;
-    }
-    /**
-     * Selects a value or an array of values.
-     * @param {?} value
-     * @return {?}
-     */
-    select(value) {
-        this._markSelected(value);
-        this._emitChangeEvent();
-    }
-    /**
-     * Deselects a value or an array of values.
-     * @param {?} value
-     * @return {?}
-     */
-    deselect(value) {
-        this._unmarkSelected(value);
-        this._emitChangeEvent();
-    }
-    /**
-     * Toggles a value between selected and deselected.
-     * @param {?} value
-     * @return {?}
-     */
-    toggle(value) {
-        this.isSelected(value) ? this.deselect(value) : this.select(value);
-    }
-    /**
-     * Clears all of the selected values.
-     * @return {?}
-     */
-    clear() {
-        this._unmarkAll();
-        this._emitChangeEvent();
-    }
-    /**
-     * Determines whether a value is selected.
-     * @param {?} value
-     * @return {?}
-     */
-    isSelected(value) {
-        return this._selection.has(value);
-    }
-    /**
-     * Determines whether the model does not have a value.
-     * @return {?}
-     */
-    isEmpty() {
-        return this._selection.size === 0;
-    }
-    /**
-     * Determines whether the model has a value.
-     * @return {?}
-     */
-    hasValue() {
-        return !this.isEmpty();
-    }
-    /**
-     * Sorts the selected values based on a predicate function.
-     * @param {?=} predicate
-     * @return {?}
-     */
-    sort(predicate) {
-        if (this._isMulti && this._selected) {
-            this._selected.sort(predicate);
-        }
-    }
-    /**
-     * Emits a change event and clears the records of selected and deselected values.
-     * @return {?}
-     */
-    _emitChangeEvent() {
-        if (this._selectedToEmit.length || this._deselectedToEmit.length) {
-            let /** @type {?} */ eventData = new SelectionChange(this._selectedToEmit, this._deselectedToEmit);
-            if (this.onChange) {
-                this.onChange.next(eventData);
-            }
-            this._deselectedToEmit = [];
-            this._selectedToEmit = [];
-        }
-        this._selected = null;
-    }
-    /**
-     * Selects a value.
-     * @param {?} value
-     * @return {?}
-     */
-    _markSelected(value) {
-        if (!this.isSelected(value)) {
-            if (!this._isMulti) {
-                this._unmarkAll();
-            }
-            this._selection.add(value);
-            if (this._emitChanges) {
-                this._selectedToEmit.push(value);
-            }
-        }
-    }
-    /**
-     * Deselects a value.
-     * @param {?} value
-     * @return {?}
-     */
-    _unmarkSelected(value) {
-        if (this.isSelected(value)) {
-            this._selection.delete(value);
-            if (this._emitChanges) {
-                this._deselectedToEmit.push(value);
-            }
-        }
-    }
-    /**
-     * Clears out the selected values.
-     * @return {?}
-     */
-    _unmarkAll() {
-        if (!this.isEmpty()) {
-            this._selection.forEach(value => this._unmarkSelected(value));
-        }
-    }
-}
-/**
- * Describes an event emitted when the value of a MdSelectionModel has changed.
- * \@docs-private
- */
-class SelectionChange {
-    /**
-     * @param {?=} added
-     * @param {?=} removed
-     */
-    constructor(added, removed) {
-        this.added = added;
-        this.removed = removed;
-    }
-}
 
 /**
  * Class to coordinate unique selection based on name.
@@ -2600,6 +2438,9 @@ function showOnDirtyErrorStateMatcher(control, form) {
     return !!(control.invalid && (control.dirty || isSubmitted));
 }
 
+/**
+ * @deprecated
+ */
 class MdCoreModule {
 }
 MdCoreModule.decorators = [
@@ -2613,7 +2454,7 @@ MdCoreModule.decorators = [
                     OverlayModule,
                     A11yModule,
                     MdOptionModule,
-                    MdSelectionModule,
+                    MdPseudoCheckboxModule,
                 ],
                 exports: [
                     MdLineModule,
@@ -2624,7 +2465,7 @@ MdCoreModule.decorators = [
                     OverlayModule,
                     A11yModule,
                     MdOptionModule,
-                    MdSelectionModule,
+                    MdPseudoCheckboxModule,
                 ],
             },] },
 ];
@@ -2638,6 +2479,19 @@ MdCoreModule.ctorParameters = () => [];
  * the component definition.
  */
 let _uniqueAutocompleteIdCounter = 0;
+/**
+ * Event object that is emitted when an autocomplete option is selected
+ */
+class MdAutocompleteSelectedEvent {
+    /**
+     * @param {?} source
+     * @param {?} option
+     */
+    constructor(source, option) {
+        this.source = source;
+        this.option = option;
+    }
+}
 class MdAutocomplete {
     /**
      * @param {?} _changeDetectorRef
@@ -2652,6 +2506,10 @@ class MdAutocomplete {
          * Function that maps an option's control value to its display value in the trigger.
          */
         this.displayWith = null;
+        /**
+         * Event that is emitted whenever an option from the list is selected.
+         */
+        this.optionSelected = new EventEmitter();
         /**
          * Unique ID to be used by autocomplete trigger's "aria-owns" property.
          */
@@ -2692,6 +2550,15 @@ class MdAutocomplete {
         });
     }
     /**
+     * Emits the `select` event.
+     * @param {?} option
+     * @return {?}
+     */
+    _emitSelectEvent(option) {
+        const /** @type {?} */ event = new MdAutocompleteSelectedEvent(this, option);
+        this.optionSelected.emit(event);
+    }
+    /**
      * Sets a class on the panel based on whether it is visible.
      * @return {?}
      */
@@ -2723,8 +2590,10 @@ MdAutocomplete.ctorParameters = () => [
 MdAutocomplete.propDecorators = {
     'template': [{ type: ViewChild, args: [TemplateRef,] },],
     'panel': [{ type: ViewChild, args: ['panel',] },],
-    'options': [{ type: ContentChildren, args: [MdOption,] },],
+    'options': [{ type: ContentChildren, args: [MdOption, { descendants: true },] },],
+    'optionGroups': [{ type: ContentChildren, args: [MdOptgroup,] },],
     'displayWith': [{ type: Input },],
+    'optionSelected': [{ type: Output },],
 };
 
 /**
@@ -2838,24 +2707,8 @@ class MdAutocompleteTrigger {
      * @return {?}
      */
     openPanel() {
-        if (!this.autocomplete) {
-            throw getMdAutocompleteMissingPanelError();
-        }
-        if (!this._overlayRef) {
-            this._createOverlay();
-        }
-        else {
-            /** Update the panel width, in case the host width has changed */
-            this._overlayRef.getState().width = this._getHostWidth();
-            this._overlayRef.updateSize();
-        }
-        if (this._overlayRef && !this._overlayRef.hasAttached()) {
-            this._overlayRef.attach(this._portal);
-            this._closingActionsSubscription = this._subscribeToClosingActions();
-        }
-        this.autocomplete._setVisibility();
+        this._attachOverlay();
         this._floatPlaceholder();
-        this._panelOpen = true;
     }
     /**
      * Closes the autocomplete suggestion panel.
@@ -2996,14 +2849,27 @@ class MdAutocompleteTrigger {
         }
     }
     /**
+     * @return {?}
+     */
+    _handleFocus() {
+        this._attachOverlay();
+        this._floatPlaceholder(true);
+    }
+    /**
      * In "auto" mode, the placeholder will animate down as soon as focus is lost.
      * This causes the value to jump when selecting an option with the mouse.
      * This method manually floats the placeholder until the panel can be closed.
+     * @param {?=} shouldAnimate Whether the placeholder should be animated when it is floated.
      * @return {?}
      */
-    _floatPlaceholder() {
+    _floatPlaceholder(shouldAnimate = false) {
         if (this._formField && this._formField.floatPlaceholder === 'auto') {
-            this._formField.floatPlaceholder = 'always';
+            if (shouldAnimate) {
+                this._formField._animateAndLockPlaceholder();
+            }
+            else {
+                this._formField.floatPlaceholder = 'always';
+            }
             this._manuallyFloatingPlaceholder = true;
         }
     }
@@ -3028,8 +2894,9 @@ class MdAutocompleteTrigger {
      * @return {?}
      */
     _scrollToOption() {
-        const /** @type {?} */ optionOffset = this.autocomplete._keyManager.activeItemIndex ?
-            this.autocomplete._keyManager.activeItemIndex * AUTOCOMPLETE_OPTION_HEIGHT : 0;
+        const /** @type {?} */ activeOptionIndex = this.autocomplete._keyManager.activeItemIndex || 0;
+        const /** @type {?} */ labelCount = MdOption.countGroupLabelsBeforeOption(activeOptionIndex, this.autocomplete.options, this.autocomplete.optionGroups);
+        const /** @type {?} */ optionOffset = (activeOptionIndex + labelCount) * AUTOCOMPLETE_OPTION_HEIGHT;
         const /** @type {?} */ panelTop = this.autocomplete._getScrollTop();
         if (optionOffset < panelTop) {
             // Scroll up to reveal selected option scrolled above the panel top
@@ -3101,6 +2968,7 @@ class MdAutocompleteTrigger {
             this._setTriggerValue(event.source.value);
             this._onChange(event.source.value);
             this._element.nativeElement.focus();
+            this.autocomplete._emitSelectEvent(event.source);
         }
         this.closePanel();
     }
@@ -3119,9 +2987,25 @@ class MdAutocompleteTrigger {
     /**
      * @return {?}
      */
-    _createOverlay() {
-        this._portal = new TemplatePortal(this.autocomplete.template, this._viewContainerRef);
-        this._overlayRef = this._overlay.create(this._getOverlayConfig());
+    _attachOverlay() {
+        if (!this.autocomplete) {
+            throw getMdAutocompleteMissingPanelError();
+        }
+        if (!this._overlayRef) {
+            this._portal = new TemplatePortal(this.autocomplete.template, this._viewContainerRef);
+            this._overlayRef = this._overlay.create(this._getOverlayConfig());
+        }
+        else {
+            /** Update the panel width, in case the host width has changed */
+            this._overlayRef.getState().width = this._getHostWidth();
+            this._overlayRef.updateSize();
+        }
+        if (this._overlayRef && !this._overlayRef.hasAttached()) {
+            this._overlayRef.attach(this._portal);
+            this._closingActionsSubscription = this._subscribeToClosingActions();
+        }
+        this.autocomplete._setVisibility();
+        this._panelOpen = true;
     }
     /**
      * @return {?}
@@ -3177,9 +3061,9 @@ MdAutocompleteTrigger.decorators = [
                     '[attr.aria-owns]': 'autocomplete?.id',
                     // Note: we use `focusin`, as opposed to `focus`, in order to open the panel
                     // a little earlier. This avoids issues where IE delays the focusing of the input.
-                    '(focusin)': 'openPanel()',
-                    '(input)': '_handleInput($event)',
+                    '(focusin)': '_handleFocus()',
                     '(blur)': '_onTouched()',
+                    '(input)': '_handleInput($event)',
                     '(keydown)': '_handleKeydown($event)',
                 },
                 providers: [MD_AUTOCOMPLETE_VALUE_ACCESSOR]
@@ -3296,7 +3180,7 @@ class MdDialogConfig {
 }
 
 // TODO(jelbourn): resizing
-// TODO(jelbourn): afterOpen and beforeClose
+// TODO(jelbourn): afterOpen
 // Counter for unique dialog ids.
 let uniqueId = 0;
 /**
@@ -3320,6 +3204,10 @@ class MdDialogRef {
          * Subject for notifying the user that the dialog has finished closing.
          */
         this._afterClosed = new Subject();
+        /**
+         * Subject for notifying the user that the dialog has started closing.
+         */
+        this._beforeClose = new Subject();
         RxChain.from(_containerInstance._animationStateChanged)
             .call(filter, event => event.phaseName === 'done' && event.toState === 'exit')
             .call(first)
@@ -3341,7 +3229,11 @@ class MdDialogRef {
         RxChain.from(this._containerInstance._animationStateChanged)
             .call(filter, event => event.phaseName === 'start')
             .call(first)
-            .subscribe(() => this._overlayRef.detachBackdrop());
+            .subscribe(() => {
+            this._beforeClose.next(dialogResult);
+            this._beforeClose.complete();
+            this._overlayRef.detachBackdrop();
+        });
         this._containerInstance._startExitAnimation();
     }
     /**
@@ -3350,6 +3242,20 @@ class MdDialogRef {
      */
     afterClosed() {
         return this._afterClosed.asObservable();
+    }
+    /**
+     * Gets an observable that is notified when the dialog has started closing.
+     * @return {?}
+     */
+    beforeClose() {
+        return this._beforeClose.asObservable();
+    }
+    /**
+     * Gets an observable that emits when the overlay's backdrop has been clicked.
+     * @return {?}
+     */
+    backdropClick() {
+        return this._overlayRef.backdropClick();
     }
     /**
      * Updates the dialog's position.
@@ -3465,6 +3371,7 @@ class MdDialogContainer extends BasePortalHost {
     }
     /**
      * Attach a TemplatePortal as content to this dialog container.
+     * @template C
      * @param {?} portal Portal to be attached as the dialog content.
      * @return {?}
      */
@@ -3486,7 +3393,13 @@ class MdDialogContainer extends BasePortalHost {
         // If were to attempt to focus immediately, then the content of the dialog would not yet be
         // ready in instances where change detection has to run first. To deal with this, we simply
         // wait for the microtask queue to be empty.
-        this._focusTrap.focusInitialElementWhenReady();
+        this._focusTrap.focusInitialElementWhenReady().then(hasMovedFocus => {
+            // If we didn't find any focusable elements inside the dialog, focus the
+            // container so the user can't tab into other elements behind it.
+            if (!hasMovedFocus) {
+                this._elementRef.nativeElement.focus();
+            }
+        });
     }
     /**
      * Restores focus to the element that was focused before the dialog opened.
@@ -3549,7 +3462,7 @@ class MdDialogContainer extends BasePortalHost {
 MdDialogContainer.decorators = [
     { type: Component, args: [{selector: 'md-dialog-container, mat-dialog-container',
                 template: "<ng-template cdkPortalHost></ng-template>",
-                styles: [".mat-dialog-container{box-shadow:0 11px 15px -7px rgba(0,0,0,.2),0 24px 38px 3px rgba(0,0,0,.14),0 9px 46px 8px rgba(0,0,0,.12);display:block;padding:24px;border-radius:2px;box-sizing:border-box;overflow:auto;max-width:80vw;width:100%;height:100%}@media screen and (-ms-high-contrast:active){.mat-dialog-container{outline:solid 1px}}.mat-dialog-content{display:block;margin:0 -24px;padding:0 24px;max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch}.mat-dialog-title{margin:0 0 20px;display:block}.mat-dialog-actions{padding:12px 0;display:flex;flex-wrap:wrap}.mat-dialog-actions:last-child{margin-bottom:-24px}.mat-dialog-actions[align=end]{justify-content:flex-end}.mat-dialog-actions[align=center]{justify-content:center}.mat-dialog-actions .mat-button+.mat-button,.mat-dialog-actions .mat-button+.mat-raised-button,.mat-dialog-actions .mat-raised-button+.mat-button,.mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:8px}[dir=rtl] .mat-dialog-actions .mat-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-button+.mat-raised-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:0;margin-right:8px}"],
+                styles: [".mat-dialog-container{box-shadow:0 11px 15px -7px rgba(0,0,0,.2),0 24px 38px 3px rgba(0,0,0,.14),0 9px 46px 8px rgba(0,0,0,.12);display:block;padding:24px;border-radius:2px;box-sizing:border-box;overflow:auto;max-width:80vw;outline:0;width:100%;height:100%}@media screen and (-ms-high-contrast:active){.mat-dialog-container{outline:solid 1px}}.mat-dialog-content{display:block;margin:0 -24px;padding:0 24px;max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch}.mat-dialog-title{margin:0 0 20px;display:block}.mat-dialog-actions{padding:12px 0;display:flex;flex-wrap:wrap}.mat-dialog-actions:last-child{margin-bottom:-24px}.mat-dialog-actions[align=end]{justify-content:flex-end}.mat-dialog-actions[align=center]{justify-content:center}.mat-dialog-actions .mat-button+.mat-button,.mat-dialog-actions .mat-button+.mat-raised-button,.mat-dialog-actions .mat-raised-button+.mat-button,.mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:8px}[dir=rtl] .mat-dialog-actions .mat-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-button+.mat-raised-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-button,[dir=rtl] .mat-dialog-actions .mat-raised-button+.mat-raised-button{margin-left:0;margin-right:8px}"],
                 encapsulation: ViewEncapsulation.None,
                 animations: [
                     trigger('slideDialog', [
@@ -3565,6 +3478,7 @@ MdDialogContainer.decorators = [
                 ],
                 host: {
                     'class': 'mat-dialog-container',
+                    'tabindex': '-1',
                     '[attr.role]': '_config?.role',
                     '[attr.aria-labelledby]': '_ariaLabelledBy',
                     '[attr.aria-describedby]': '_config?.ariaDescribedBy || null',
@@ -3777,7 +3691,7 @@ class MdDialog {
             });
         }
         if (componentOrTemplateRef instanceof TemplateRef) {
-            dialogContainer.attachTemplatePortal(new TemplatePortal(componentOrTemplateRef, /** @type {?} */ ((null))));
+            dialogContainer.attachTemplatePortal(new TemplatePortal(componentOrTemplateRef, /** @type {?} */ ((null)), /** @type {?} */ ({ $implicit: config.data, dialogRef })));
         }
         else {
             const /** @type {?} */ injector = this._createInjector(config, dialogRef, dialogContainer);
@@ -4086,8 +4000,8 @@ const fadeInContent = trigger('fadeInContent', [
 ]);
 
 /**
- * Returns an exception to be thrown when attempting to change a s
- * elect's `multiple` option after initialization.
+ * Returns an exception to be thrown when attempting to change a select's `multiple` option
+ * after initialization.
  * \@docs-private
  * @return {?}
  */
@@ -4103,6 +4017,15 @@ function getMdSelectDynamicMultipleError() {
  */
 function getMdSelectNonArrayValueError() {
     return Error('Cannot assign truthy non-array value to select in `multiple` mode.');
+}
+/**
+ * Returns an exception to be thrown when assigning a non-function value to the comparator
+ * used to determine if a value corresponds to an option. Note that whether the function
+ * actually takes two values and returns a boolean is not checked.
+ * @return {?}
+ */
+function getMdSelectNonFunctionValueError() {
+    return Error('Cannot assign a non-function value to `compareWith`.');
 }
 
 /**
@@ -4305,6 +4228,10 @@ class MdSelect extends _MdSelectMixinBase {
          */
         this._multiple = false;
         /**
+         * Comparison function to specify which option is displayed. Defaults to object equality.
+         */
+        this._compareWith = (o1, o2) => o1 === o2;
+        /**
          * The animation state of the placeholder.
          */
         this._placeholderState = '';
@@ -4432,6 +4359,27 @@ class MdSelect extends _MdSelectMixinBase {
         this._multiple = coerceBooleanProperty(value);
     }
     /**
+     * A function to compare the option values with the selected values. The first argument
+     * is a value from an option. The second is a value from the selection. A boolean
+     * should be returned.
+     * @return {?}
+     */
+    get compareWith() { return this._compareWith; }
+    /**
+     * @param {?} fn
+     * @return {?}
+     */
+    set compareWith(fn) {
+        if (typeof fn !== 'function') {
+            throw getMdSelectNonFunctionValueError();
+        }
+        this._compareWith = fn;
+        if (this._selectionModel) {
+            // A different comparator means the selection could change.
+            this._initializeSelection();
+        }
+    }
+    /**
      * Whether to float the placeholder text.
      * @return {?}
      */
@@ -4503,11 +4451,7 @@ class MdSelect extends _MdSelectMixinBase {
         this._initKeyManager();
         this._changeSubscription = startWith.call(this.options.changes, null).subscribe(() => {
             this._resetOptions();
-            // Defer setting the value in order to avoid the "Expression
-            // has changed after it was checked" errors from Angular.
-            Promise.resolve().then(() => {
-                this._setSelectionByValue(this._control ? this._control.value : this._value);
-            });
+            this._initializeSelection();
         });
     }
     /**
@@ -4623,8 +4567,11 @@ class MdSelect extends _MdSelectMixinBase {
      * @return {?}
      */
     get triggerValue() {
+        if (!this._selectionModel || this._selectionModel.isEmpty()) {
+            return '';
+        }
         if (this._multiple) {
-            let /** @type {?} */ selectedOptions = this._selectionModel.selected.map(option => option.viewValue);
+            const /** @type {?} */ selectedOptions = this._selectionModel.selected.map(option => option.viewValue);
             if (this._isRtl()) {
                 selectedOptions.reverse();
             }
@@ -4755,6 +4702,16 @@ class MdSelect extends _MdSelectMixinBase {
         ((scrollContainer)).scrollTop = this._scrollTop;
     }
     /**
+     * @return {?}
+     */
+    _initializeSelection() {
+        // Defer setting the value in order to avoid the "Expression
+        // has changed after it was checked" errors from Angular.
+        Promise.resolve().then(() => {
+            this._setSelectionByValue(this._control ? this._control.value : this._value);
+        });
+    }
+    /**
      * Sets the selected option based on a value. If no option can be
      * found with the designated value, the select trigger is cleared.
      * @param {?} value
@@ -4792,8 +4749,18 @@ class MdSelect extends _MdSelectMixinBase {
      * @return {?} Option that has the corresponding value.
      */
     _selectValue(value, isUserInput = false) {
-        let /** @type {?} */ correspondingOption = this.options.find(option => {
-            return option.value != null && option.value === value;
+        const /** @type {?} */ correspondingOption = this.options.find((option) => {
+            try {
+                // Treat null as a special reset value.
+                return option.value != null && this._compareWith(option.value, value);
+            }
+            catch (error) {
+                if (isDevMode()) {
+                    // Notify developers of errors in their comparator.
+                    console.warn(error);
+                }
+                return false;
+            }
         });
         if (correspondingOption) {
             isUserInput ? correspondingOption._selectViaInteraction() : correspondingOption.select();
@@ -5001,7 +4968,7 @@ class MdSelect extends _MdSelectMixinBase {
         const /** @type {?} */ maxScroll = scrollContainerHeight - panelHeight;
         if (this._hasValue()) {
             let /** @type {?} */ selectedOptionOffset = ((this._getOptionIndex(this._selectionModel.selected[0])));
-            selectedOptionOffset += this._getLabelCountBeforeOption(selectedOptionOffset);
+            selectedOptionOffset += MdOption.countGroupLabelsBeforeOption(selectedOptionOffset, this.options, this.optionGroups);
             // We must maintain a scroll buffer so the selected option will be scrolled to the
             // center of the overlay panel rather than the top.
             const /** @type {?} */ scrollBuffer = panelHeight / 2;
@@ -5013,8 +4980,9 @@ class MdSelect extends _MdSelectMixinBase {
             // we must only adjust for the height difference between the option element
             // and the trigger element, then multiply it by -1 to ensure the panel moves
             // in the correct direction up the page.
+            let /** @type {?} */ groupLabels = MdOption.countGroupLabelsBeforeOption(0, this.options, this.optionGroups);
             this._offsetY = (SELECT_ITEM_HEIGHT - SELECT_TRIGGER_HEIGHT) / 2 * -1 -
-                (this._getLabelCountBeforeOption(0) * SELECT_ITEM_HEIGHT);
+                (groupLabels * SELECT_ITEM_HEIGHT);
         }
         this._checkOverlayWithinViewport(maxScroll);
     }
@@ -5265,27 +5233,6 @@ class MdSelect extends _MdSelectMixinBase {
     _getItemCount() {
         return this.options.length + this.optionGroups.length;
     }
-    /**
-     * Calculates the amount of option group labels that precede the specified option.
-     * Useful when positioning the panel, because the labels will offset the index of the
-     * currently-selected option.
-     * @param {?} optionIndex
-     * @return {?}
-     */
-    _getLabelCountBeforeOption(optionIndex) {
-        if (this.optionGroups.length) {
-            let /** @type {?} */ options = this.options.toArray();
-            let /** @type {?} */ groups = this.optionGroups.toArray();
-            let /** @type {?} */ groupCounter = 0;
-            for (let /** @type {?} */ i = 0; i < optionIndex + 1; i++) {
-                if (options[i].group && options[i].group === groups[groupCounter]) {
-                    groupCounter++;
-                }
-            }
-            return groupCounter;
-        }
-        return 0;
-    }
 }
 MdSelect.decorators = [
     { type: Component, args: [{selector: 'md-select, mat-select',
@@ -5347,6 +5294,7 @@ MdSelect.propDecorators = {
     'placeholder': [{ type: Input },],
     'required': [{ type: Input },],
     'multiple': [{ type: Input },],
+    'compareWith': [{ type: Input },],
     'floatPlaceholder': [{ type: Input },],
     'tabIndex': [{ type: Input },],
     'value': [{ type: Input },],
@@ -5424,8 +5372,16 @@ class MdSliderChange {
  * \@docs-private
  */
 class MdSliderBase {
+    /**
+     * @param {?} _renderer
+     * @param {?} _elementRef
+     */
+    constructor(_renderer, _elementRef) {
+        this._renderer = _renderer;
+        this._elementRef = _elementRef;
+    }
 }
-const _MdSliderMixinBase = mixinDisabled(MdSliderBase);
+const _MdSliderMixinBase = mixinColor(mixinDisabled(MdSliderBase), 'accent');
 /**
  * Allows users to select from a range of values by moving the slider thumb. It is similar in
  * behavior to the native `<input type="range">` element.
@@ -5433,14 +5389,13 @@ const _MdSliderMixinBase = mixinDisabled(MdSliderBase);
 class MdSlider extends _MdSliderMixinBase {
     /**
      * @param {?} renderer
-     * @param {?} _elementRef
+     * @param {?} elementRef
      * @param {?} _focusOriginMonitor
      * @param {?} _changeDetectorRef
      * @param {?} _dir
      */
-    constructor(renderer, _elementRef, _focusOriginMonitor, _changeDetectorRef, _dir) {
-        super();
-        this._elementRef = _elementRef;
+    constructor(renderer, elementRef, _focusOriginMonitor, _changeDetectorRef, _dir) {
+        super(renderer, elementRef);
         this._focusOriginMonitor = _focusOriginMonitor;
         this._changeDetectorRef = _changeDetectorRef;
         this._dir = _dir;
@@ -5452,7 +5407,6 @@ class MdSlider extends _MdSliderMixinBase {
         this._tickInterval = 0;
         this._value = null;
         this._vertical = false;
-        this.color = 'accent';
         /**
          * Event emitted when the slider value has changed.
          */
@@ -6115,9 +6069,6 @@ MdSlider.decorators = [
                     '[attr.aria-valuemin]': 'min',
                     '[attr.aria-valuenow]': 'value',
                     '[attr.aria-orientation]': 'vertical ? "vertical" : "horizontal"',
-                    '[class.mat-primary]': 'color == "primary"',
-                    '[class.mat-accent]': 'color != "primary" && color != "warn"',
-                    '[class.mat-warn]': 'color == "warn"',
                     '[class.mat-slider-disabled]': 'disabled',
                     '[class.mat-slider-has-ticks]': 'tickInterval',
                     '[class.mat-slider-horizontal]': '!vertical',
@@ -6130,7 +6081,7 @@ MdSlider.decorators = [
                 },
                 template: "<div class=\"mat-slider-wrapper\" #sliderWrapper><div class=\"mat-slider-track-wrapper\"><div class=\"mat-slider-track-background\" [ngStyle]=\"_trackBackgroundStyles\"></div><div class=\"mat-slider-track-fill\" [ngStyle]=\"_trackFillStyles\"></div></div><div class=\"mat-slider-ticks-container\" [ngStyle]=\"_ticksContainerStyles\"><div class=\"mat-slider-ticks\" [ngStyle]=\"_ticksStyles\"></div></div><div class=\"mat-slider-thumb-container\" [ngStyle]=\"_thumbContainerStyles\"><div class=\"mat-slider-focus-ring\"></div><div class=\"mat-slider-thumb\"></div><div class=\"mat-slider-thumb-label\"><span class=\"mat-slider-thumb-label-text\">{{displayValue}}</span></div></div></div>",
                 styles: [".mat-slider{display:inline-block;position:relative;box-sizing:border-box;padding:8px;outline:0;vertical-align:middle}.mat-slider-wrapper{position:absolute}.mat-slider-track-wrapper{position:absolute;top:0;left:0;overflow:hidden}.mat-slider-track-fill{position:absolute;transform-origin:0 0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-track-background{position:absolute;transform-origin:100% 100%;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-ticks-container{position:absolute;left:0;top:0;overflow:hidden}.mat-slider-ticks{background-repeat:repeat;background-clip:content-box;box-sizing:border-box;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-container{position:absolute;z-index:1;transition:transform .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-focus-ring{position:absolute;width:30px;height:30px;border-radius:50%;transform:scale(0);opacity:0;transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),opacity .4s cubic-bezier(.25,.8,.25,1)}.cdk-keyboard-focused .mat-slider-focus-ring{transform:scale(1);opacity:1}.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label{cursor:-webkit-grab;cursor:grab}.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb,.mat-slider-sliding:not(.mat-slider-disabled) .mat-slider-thumb-label,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb-label:active,.mat-slider:not(.mat-slider-disabled) .mat-slider-thumb:active{cursor:-webkit-grabbing;cursor:grabbing}.mat-slider-thumb{position:absolute;right:-10px;bottom:-10px;box-sizing:border-box;width:20px;height:20px;border:3px solid transparent;border-radius:50%;transform:scale(.7);transition:transform .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1),border-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label{display:none;align-items:center;justify-content:center;position:absolute;width:28px;height:28px;border-radius:50%;transition:transform .4s cubic-bezier(.25,.8,.25,1),border-radius .4s cubic-bezier(.25,.8,.25,1),background-color .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-thumb-label-text{z-index:1;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-sliding .mat-slider-thumb-container,.mat-slider-sliding .mat-slider-track-background,.mat-slider-sliding .mat-slider-track-fill{transition-duration:0s}.mat-slider-has-ticks .mat-slider-wrapper::after{content:'';position:absolute;border-width:0;border-style:solid;opacity:0;transition:opacity .4s cubic-bezier(.25,.8,.25,1)}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after,.mat-slider-has-ticks:hover:not(.mat-slider-hide-last-tick) .mat-slider-wrapper::after{opacity:1}.mat-slider-has-ticks.cdk-focused:not(.mat-slider-disabled) .mat-slider-ticks,.mat-slider-has-ticks:hover:not(.mat-slider-disabled) .mat-slider-ticks{opacity:1}.mat-slider-thumb-label-showing .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-thumb-label-showing .mat-slider-thumb-label{display:flex}.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:100% 100%}.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:0 0}.cdk-focused.mat-slider-thumb-label-showing .mat-slider-thumb{transform:scale(0)}.cdk-focused .mat-slider-thumb-label{border-radius:50% 50% 0}.cdk-focused .mat-slider-thumb-label-text{opacity:1}.cdk-mouse-focused .mat-slider-thumb,.cdk-program-focused .mat-slider-thumb,.cdk-touch-focused .mat-slider-thumb{border-width:2px;transform:scale(1)}.mat-slider-disabled .mat-slider-focus-ring{transform:scale(0);opacity:0}.mat-slider-disabled .mat-slider-thumb{border-width:4px;transform:scale(.5)}.mat-slider-disabled .mat-slider-thumb-label{display:none}.mat-slider-horizontal{height:48px;min-width:128px}.mat-slider-horizontal .mat-slider-wrapper{height:2px;top:23px;left:8px;right:8px}.mat-slider-horizontal .mat-slider-wrapper::after{height:2px;border-left-width:2px;right:0;top:0}.mat-slider-horizontal .mat-slider-track-wrapper{height:2px;width:100%}.mat-slider-horizontal .mat-slider-track-fill{height:2px;width:100%;transform:scaleX(0)}.mat-slider-horizontal .mat-slider-track-background{height:2px;width:100%;transform:scaleX(1)}.mat-slider-horizontal .mat-slider-ticks-container{height:2px;width:100%}.mat-slider-horizontal .mat-slider-ticks{height:2px;width:100%}.mat-slider-horizontal .mat-slider-thumb-container{width:100%;height:0;top:50%}.mat-slider-horizontal .mat-slider-focus-ring{top:-15px;right:-15px}.mat-slider-horizontal .mat-slider-thumb-label{right:-14px;top:-40px;transform:translateY(26px) scale(.01) rotate(45deg)}.mat-slider-horizontal .mat-slider-thumb-label-text{transform:rotate(-45deg)}.mat-slider-horizontal.cdk-focused .mat-slider-thumb-label{transform:rotate(45deg)}.mat-slider-vertical{width:48px;min-height:128px}.mat-slider-vertical .mat-slider-wrapper{width:2px;top:8px;bottom:8px;left:23px}.mat-slider-vertical .mat-slider-wrapper::after{width:2px;border-top-width:2px;bottom:0;left:0}.mat-slider-vertical .mat-slider-track-wrapper{height:100%;width:2px}.mat-slider-vertical .mat-slider-track-fill{height:100%;width:2px;transform:scaleY(0)}.mat-slider-vertical .mat-slider-track-background{height:100%;width:2px;transform:scaleY(1)}.mat-slider-vertical .mat-slider-ticks-container{width:2px;height:100%}.mat-slider-vertical .mat-slider-focus-ring{bottom:-15px;left:-15px}.mat-slider-vertical .mat-slider-ticks{width:2px;height:100%}.mat-slider-vertical .mat-slider-thumb-container{height:100%;width:0;left:50%}.mat-slider-vertical .mat-slider-thumb-label{bottom:-14px;left:-40px;transform:translateX(26px) scale(.01) rotate(-45deg)}.mat-slider-vertical .mat-slider-thumb-label-text{transform:rotate(45deg)}.mat-slider-vertical.cdk-focused .mat-slider-thumb-label{transform:rotate(-45deg)}[dir=rtl] .mat-slider-wrapper::after{left:0;right:auto}[dir=rtl] .mat-slider-horizontal .mat-slider-track-fill{transform-origin:100% 100%}[dir=rtl] .mat-slider-horizontal .mat-slider-track-background{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-fill{transform-origin:0 0}[dir=rtl] .mat-slider-horizontal.mat-slider-axis-inverted .mat-slider-track-background{transform-origin:100% 100%}"],
-                inputs: ['disabled'],
+                inputs: ['disabled', 'color'],
                 encapsulation: ViewEncapsulation.None,
                 changeDetection: ChangeDetectionStrategy.OnPush,
             },] },
@@ -6156,7 +6107,6 @@ MdSlider.propDecorators = {
     '_tickIntervalDeprecated': [{ type: Input, args: ['tick-interval',] },],
     'value': [{ type: Input },],
     'vertical': [{ type: Input },],
-    'color': [{ type: Input },],
     'change': [{ type: Output },],
     'input': [{ type: Output },],
     '_sliderWrapper': [{ type: ViewChild, args: ['sliderWrapper',] },],
@@ -6600,7 +6550,7 @@ MdTooltip.decorators = [
 MdTooltip.ctorParameters = () => [
     { type: Overlay, },
     { type: ElementRef, },
-    { type: ScrollDispatcher, },
+    { type: ScrollDispatcher$1, },
     { type: ViewContainerRef, },
     { type: NgZone, },
     { type: Renderer2, },
@@ -6826,5 +6776,5 @@ MdTooltipModule.ctorParameters = () => [];
  * Generated bundle index. Do not edit.
  */
 
-export { VERSION, coerceBooleanProperty, coerceNumberProperty, ObserversModule, ObserveContent, Dir, Directionality, BidiModule, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MATERIAL_SANITY_CHECKS, MD_PLACEHOLDER_GLOBAL_OPTIONS, MD_ERROR_GLOBAL_OPTIONS, defaultErrorStateMatcher, showOnDirtyErrorStateMatcher, MdCoreModule, MdOptionModule, MdOptionSelectionChange, MdOption, MdOptgroupBase, _MdOptgroupMixinBase, MdOptgroup, PlatformModule, Platform, getSupportedInputTypes, OVERLAY_PROVIDERS, OverlayModule, Overlay, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, VIEWPORT_RULER_PROVIDER, ConnectionPositionPair, ScrollableViewProperties, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, ScrollStrategyOptions, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, ScrollDispatchModule, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, SelectionModel, SelectionChange, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, A, Z, MATERIAL_COMPATIBILITY_MODE, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdSelectionModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_SCROLL_STRATEGY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER, MD_AUTOCOMPLETE_VALUE_ACCESSOR, getMdAutocompleteMissingPanelError, MdAutocompleteTrigger, MdDialogModule, MD_DIALOG_DATA, MD_DIALOG_SCROLL_STRATEGY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER, MdDialog, throwMdDialogContentAlreadyAttachedError, MdDialogContainer, MdDialogClose, MdDialogTitle, MdDialogContent, MdDialogActions, MdDialogConfig, MdDialogRef, MdSelectModule, fadeInContent, transformPanel, transformPlaceholder, SELECT_ITEM_HEIGHT, SELECT_PANEL_MAX_HEIGHT, SELECT_MAX_OPTIONS_DISPLAYED, SELECT_TRIGGER_HEIGHT, SELECT_OPTION_HEIGHT_ADJUSTMENT, SELECT_PANEL_PADDING_X, SELECT_PANEL_INDENT_PADDING_X, SELECT_MULTIPLE_PANEL_PADDING_X, SELECT_PANEL_PADDING_Y, SELECT_PANEL_VIEWPORT_PADDING, MD_SELECT_SCROLL_STRATEGY, MD_SELECT_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_SELECT_SCROLL_STRATEGY_PROVIDER, MdSelectChange, MdSelectBase, _MdSelectMixinBase, MdSelectTrigger, MdSelect, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, TOOLTIP_PANEL_CLASS, getMdTooltipInvalidPositionError, MD_TOOLTIP_SCROLL_STRATEGY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER, MdTooltip, TooltipComponent, mixinColor as ɵd, mixinDisabled as ɵc, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵb, RippleRenderer as ɵa };
+export { VERSION, coerceBooleanProperty, coerceNumberProperty, ObserversModule, ObserveContent, SelectionModel, Dir, Directionality, BidiModule, Portal, BasePortalHost, ComponentPortal, TemplatePortal, PortalHostDirective, TemplatePortalDirective, PortalModule, DomPortalHost, GestureConfig, LiveAnnouncer, LIVE_ANNOUNCER_ELEMENT_TOKEN, LIVE_ANNOUNCER_PROVIDER, InteractivityChecker, FocusTrap, FocusTrapFactory, FocusTrapDeprecatedDirective, FocusTrapDirective, isFakeMousedownFromScreenReader, A11yModule, UniqueSelectionDispatcher, UNIQUE_SELECTION_DISPATCHER_PROVIDER, MdLineModule, MdLine, MdLineSetter, CompatibilityModule, NoConflictStyleCompatibilityMode, MdCommonModule, MATERIAL_SANITY_CHECKS, MD_PLACEHOLDER_GLOBAL_OPTIONS, MD_ERROR_GLOBAL_OPTIONS, defaultErrorStateMatcher, showOnDirtyErrorStateMatcher, MdCoreModule, MdOptionModule, MdOptionSelectionChange, MdOption, MdOptgroupBase, _MdOptgroupMixinBase, MdOptgroup, PlatformModule, Platform, getSupportedInputTypes, OVERLAY_PROVIDERS, OverlayModule, Overlay, OverlayContainer, FullscreenOverlayContainer, OverlayRef, OverlayState, ConnectedOverlayDirective, OverlayOrigin, ViewportRuler, GlobalPositionStrategy, ConnectedPositionStrategy, VIEWPORT_RULER_PROVIDER, ConnectionPositionPair, ScrollingVisibility, ConnectedOverlayPositionChange, Scrollable, ScrollDispatcher, ScrollStrategyOptions, RepositionScrollStrategy, CloseScrollStrategy, NoopScrollStrategy, BlockScrollStrategy, MdRipple, MD_RIPPLE_GLOBAL_OPTIONS, RippleRef, RippleState, RIPPLE_FADE_IN_DURATION, RIPPLE_FADE_OUT_DURATION, MdRippleModule, StyleModule, TOUCH_BUFFER_MS, FocusOriginMonitor, CdkMonitorFocus, FOCUS_ORIGIN_MONITOR_PROVIDER_FACTORY, FOCUS_ORIGIN_MONITOR_PROVIDER, applyCssTransform, UP_ARROW, DOWN_ARROW, RIGHT_ARROW, LEFT_ARROW, PAGE_UP, PAGE_DOWN, HOME, END, ENTER, SPACE, TAB, ESCAPE, BACKSPACE, DELETE, A, Z, MATERIAL_COMPATIBILITY_MODE, getMdCompatibilityInvalidPrefixError, MAT_ELEMENTS_SELECTOR, MD_ELEMENTS_SELECTOR, MatPrefixRejector, MdPrefixRejector, AnimationCurves, AnimationDurations, MdPseudoCheckboxModule, MdPseudoCheckbox, NativeDateModule, MdNativeDateModule, DateAdapter, MD_DATE_FORMATS, NativeDateAdapter, MD_NATIVE_DATE_FORMATS, MdAutocompleteModule, MdAutocompleteSelectedEvent, MdAutocomplete, AUTOCOMPLETE_OPTION_HEIGHT, AUTOCOMPLETE_PANEL_HEIGHT, MD_AUTOCOMPLETE_SCROLL_STRATEGY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_AUTOCOMPLETE_SCROLL_STRATEGY_PROVIDER, MD_AUTOCOMPLETE_VALUE_ACCESSOR, getMdAutocompleteMissingPanelError, MdAutocompleteTrigger, MdDialogModule, MD_DIALOG_DATA, MD_DIALOG_SCROLL_STRATEGY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_DIALOG_SCROLL_STRATEGY_PROVIDER, MdDialog, throwMdDialogContentAlreadyAttachedError, MdDialogContainer, MdDialogClose, MdDialogTitle, MdDialogContent, MdDialogActions, MdDialogConfig, MdDialogRef, MdSelectModule, fadeInContent, transformPanel, transformPlaceholder, SELECT_ITEM_HEIGHT, SELECT_PANEL_MAX_HEIGHT, SELECT_MAX_OPTIONS_DISPLAYED, SELECT_TRIGGER_HEIGHT, SELECT_OPTION_HEIGHT_ADJUSTMENT, SELECT_PANEL_PADDING_X, SELECT_PANEL_INDENT_PADDING_X, SELECT_MULTIPLE_PANEL_PADDING_X, SELECT_PANEL_PADDING_Y, SELECT_PANEL_VIEWPORT_PADDING, MD_SELECT_SCROLL_STRATEGY, MD_SELECT_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_SELECT_SCROLL_STRATEGY_PROVIDER, MdSelectChange, MdSelectBase, _MdSelectMixinBase, MdSelectTrigger, MdSelect, MdSliderModule, MD_SLIDER_VALUE_ACCESSOR, MdSliderChange, MdSliderBase, _MdSliderMixinBase, MdSlider, MdTooltipModule, TOUCHEND_HIDE_DELAY, SCROLL_THROTTLE_MS, TOOLTIP_PANEL_CLASS, getMdTooltipInvalidPositionError, MD_TOOLTIP_SCROLL_STRATEGY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER_FACTORY, MD_TOOLTIP_SCROLL_STRATEGY_PROVIDER, MdTooltip, TooltipComponent, mixinColor as ɵd, mixinDisabled as ɵc, UNIQUE_SELECTION_DISPATCHER_PROVIDER_FACTORY as ɵb, RippleRenderer as ɵa };
 //# sourceMappingURL=material.js.map
